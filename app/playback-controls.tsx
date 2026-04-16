@@ -16,30 +16,26 @@ import {
 } from 'lucide-react';
 import { usePlayback } from '@/app/playback-context';
 import { getValidImageUrl, cn } from '@/lib/utils';
+import { toggleFavoriteAction } from './actions';
 
 export function TrackInfo() {
   let { currentTrack } = usePlayback();
-  let [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
     if (currentTrack) {
-      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-      setIsLiked(favorites.includes(currentTrack.id));
+      setIsLiked(Boolean((currentTrack as any).favorite));
     }
   }, [currentTrack]);
 
-  const toggleFavorite = () => {
+  const toggleFavorite = async () => {
     if (!currentTrack) return;
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-    let newFavorites;
-    if (favorites.includes(currentTrack.id)) {
-      newFavorites = favorites.filter((id: string) => id !== currentTrack.id);
-      setIsLiked(false);
-    } else {
-      newFavorites = [...favorites, currentTrack.id];
-      setIsLiked(true);
+    const nextState = !isLiked;
+    setIsLiked(nextState); // Optimistic UI
+    const result = await toggleFavoriteAction(currentTrack.id, nextState);
+    if (!result.success) {
+      setIsLiked(!nextState); // Rollback
     }
-    localStorage.setItem('favorites', JSON.stringify(newFavorites));
   };
 
   return (
@@ -49,7 +45,7 @@ export function TrackInfo() {
           <img
             src={getValidImageUrl(currentTrack.imageUrl)}
             alt="Now playing"
-            className="w-10 h-10 object-cover"
+            className="w-10 h-10 object-cover rounded shadow-lg"
           />
           <div className="flex-shrink min-w-0">
             <div className="text-sm font-medium truncate max-w-[120px] sm:max-w-[200px] text-gray-200">
@@ -109,7 +105,7 @@ export function PlaybackButtons() {
         disabled={!currentTrack || isLoadingYouTube}
       >
         {isLoadingYouTube ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
+          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
         ) : isPlaying ? (
           <Pause className="w-5 h-5 fill-current" />
         ) : (
@@ -138,25 +134,27 @@ export function PlaybackButtons() {
 }
 
 export function ProgressBar() {
-  let { currentTime, duration, audioRef, setCurrentTime } = usePlayback();
+  let { currentTime, duration, setCurrentTime } = usePlayback();
   let progressBarRef = useRef<HTMLDivElement>(null);
 
   let formatTime = (time: number) => {
+    if (isNaN(time)) return '0:00';
     let minutes = Math.floor(time / 60);
     let seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   let handleProgressChange = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (progressBarRef.current && audioRef.current) {
+    if (progressBarRef.current && duration > 0) {
       let rect = progressBarRef.current.getBoundingClientRect();
       let x = e.clientX - rect.left;
       let percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
       let newTime = (percentage / 100) * duration;
-      audioRef.current.currentTime = newTime;
       setCurrentTime(newTime);
     }
   };
+
+  const currentPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
     <div className="flex items-center w-full mt-1 max-w-[600px]">
@@ -165,16 +163,16 @@ export function ProgressBar() {
       </span>
       <div
         ref={progressBarRef}
-        className="flex-grow mx-2 h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative group flex items-center"
+        className="flex-grow mx-3 h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative group flex items-center"
         onClick={handleProgressChange}
       >
         <div
           className="absolute top-0 left-0 h-full bg-white group-hover:bg-[#1db954] rounded-full transition-colors"
-          style={{ width: `${(currentTime / duration) * 100}%` }}
+          style={{ width: `${currentPercent}%` }}
         ></div>
         <div 
-          className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover:opacity-100 shadow disabled shadow-black transition-opacity"
-          style={{ left: `calc(${(currentTime / duration) * 100}% - 6px)` }}
+          className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover:opacity-100 shadow shadow-black transition-opacity"
+          style={{ left: `calc(${currentPercent}% - 6px)` }}
         ></div>
       </div>
       <span className="text-[11px] tabular-nums text-[#a7a7a7] min-w-[40px] text-left">
@@ -185,16 +183,10 @@ export function ProgressBar() {
 }
 
 export function Volume() {
-  let { audioRef, currentTrack } = usePlayback();
-  let [volume, setVolume] = useState(100);
+  let { currentTrack, volume, setVolume } = usePlayback();
   let [isMuted, setIsMuted] = useState(false);
+  let [prevVolume, setPrevVolume] = useState(70);
   let volumeBarRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = isMuted ? 0 : volume / 100;
-    }
-  }, [volume, isMuted, audioRef]);
 
   let handleVolumeChange = (e: React.MouseEvent<HTMLDivElement>) => {
     if (volumeBarRef.current) {
@@ -202,17 +194,17 @@ export function Volume() {
       let x = e.clientX - rect.left;
       let percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
       setVolume(percentage);
-      if (audioRef.current) {
-        audioRef.current.volume = percentage / 100;
-      }
-      setIsMuted(percentage === 0);
+      if (percentage > 0) setIsMuted(false);
     }
   };
 
   let toggleMute = () => {
     if (isMuted) {
+      setVolume(prevVolume);
       setIsMuted(false);
     } else {
+      setPrevVolume(volume);
+      setVolume(0);
       setIsMuted(true);
     }
   };
@@ -240,11 +232,11 @@ export function Volume() {
       >
         <div
           className="absolute top-0 left-0 h-full bg-white group-hover:bg-[#1db954] rounded-full transition-colors"
-          style={{ width: `${isMuted ? 0 : volume}%` }}
+          style={{ width: `${volume}%` }}
         ></div>
         <div 
           className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover:opacity-100 shadow shadow-black transition-opacity"
-          style={{ left: `calc(${isMuted ? 0 : volume}% - 6px)` }}
+          style={{ left: `calc(${volume}% - 6px)` }}
         ></div>
       </div>
     </div>
@@ -252,120 +244,10 @@ export function Volume() {
 }
 
 export function PlaybackControls() {
-  let {
-    currentTrack,
-    audioRef,
-    setCurrentTime,
-    setDuration,
-    playPreviousTrack,
-    playNextTrack,
-    togglePlayPause,
-  } = usePlayback();
-
-  useEffect(() => {
-    let audio = audioRef.current;
-    if (audio) {
-      let updateTime = () => setCurrentTime(audio.currentTime);
-      let updateDuration = () => setDuration(audio.duration);
-
-      audio.addEventListener('timeupdate', updateTime);
-      audio.addEventListener('loadedmetadata', updateDuration);
-
-      return () => {
-        audio.removeEventListener('timeupdate', updateTime);
-        audio.removeEventListener('loadedmetadata', updateDuration);
-      };
-    }
-  }, [audioRef, setCurrentTime, setDuration]);
-
-  useEffect(() => {
-    if ('mediaSession' in navigator && currentTrack) {
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: currentTrack.name,
-        artist: currentTrack.artist,
-        album: currentTrack.album || undefined,
-        artwork: [
-          { src: getValidImageUrl(currentTrack.imageUrl), sizes: '512x512', type: 'image/jpeg' },
-        ],
-      });
-
-      navigator.mediaSession.setActionHandler('play', () => {
-        audioRef.current?.play();
-        togglePlayPause();
-      });
-
-      navigator.mediaSession.setActionHandler('pause', () => {
-        audioRef.current?.pause();
-        togglePlayPause();
-      });
-
-      navigator.mediaSession.setActionHandler(
-        'previoustrack',
-        playPreviousTrack
-      );
-      navigator.mediaSession.setActionHandler('nexttrack', playNextTrack);
-
-      navigator.mediaSession.setActionHandler('seekto', (details) => {
-        if (audioRef.current && details.seekTime !== undefined) {
-          audioRef.current.currentTime = details.seekTime;
-          setCurrentTime(details.seekTime);
-        }
-      });
-
-      const updatePositionState = () => {
-        if (audioRef.current && !isNaN(audioRef.current.duration)) {
-          try {
-            navigator.mediaSession.setPositionState({
-              duration: audioRef.current.duration,
-              playbackRate: audioRef.current.playbackRate,
-              position: audioRef.current.currentTime,
-            });
-          } catch (error) {
-            console.error('Error updating position state:', error);
-          }
-        }
-      };
-
-      const handleLoadedMetadata = () => {
-        updatePositionState();
-      };
-
-      audioRef.current?.addEventListener('timeupdate', updatePositionState);
-      audioRef.current?.addEventListener(
-        'loadedmetadata',
-        handleLoadedMetadata
-      );
-
-      return () => {
-        audioRef.current?.removeEventListener(
-          'timeupdate',
-          updatePositionState
-        );
-        audioRef.current?.removeEventListener(
-          'loadedmetadata',
-          handleLoadedMetadata
-        );
-        navigator.mediaSession.setActionHandler('play', null);
-        navigator.mediaSession.setActionHandler('pause', null);
-        navigator.mediaSession.setActionHandler('previoustrack', null);
-        navigator.mediaSession.setActionHandler('nexttrack', null);
-        navigator.mediaSession.setActionHandler('seekto', null);
-      };
-    }
-  }, [
-    currentTrack,
-    playPreviousTrack,
-    playNextTrack,
-    togglePlayPause,
-    audioRef,
-    setCurrentTime,
-  ]);
-
   return (
-    <div className="fixed bottom-16 md:bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#000000] border-t border-transparent z-50">
-      <audio ref={audioRef} />
+    <div className="fixed bottom-16 md:bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#000000] border-t border-white/5 shadow-2xl z-50">
       <TrackInfo />
-      <div className="flex flex-col items-center w-1/3">
+      <div className="flex flex-col items-center flex-grow max-w-[40%] md:max-w-[45%] lg:max-w-xl">
         <PlaybackButtons />
         <ProgressBar />
       </div>

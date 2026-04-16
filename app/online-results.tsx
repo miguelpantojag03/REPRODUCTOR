@@ -21,10 +21,6 @@ export function OnlineResults({ tracks }: { tracks: any[] }) {
     try {
       const result = await saveOnlineTrackAction(track);
       if (result.success) {
-        const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-        if (!favorites.includes(track.id)) {
-          localStorage.setItem('favorites', JSON.stringify([...favorites, track.id]));
-        }
         window.dispatchEvent(new CustomEvent('refresh-songs'));
         toast(`"${track.name}" guardada en tu biblioteca`, 'success');
       }

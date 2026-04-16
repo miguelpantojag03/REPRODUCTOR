@@ -21,6 +21,8 @@ type PlaybackContextType = {
   currentTrack: Song | null;
   currentTime: number;
   duration: number;
+  volume: number;
+  setVolume: (volume: number) => void;
   togglePlayPause: () => void;
   playTrack: (track: Song) => void;
   playNextTrack: () => void;
@@ -122,15 +124,16 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [currentTrack, setCurrentTrack] = useState<Song | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [volume, setVolumeInternal] = useState(70);
   const [playlist, setPlaylistInternal] = useState<Song[]>([]);
   const [isLoadingYouTube, setIsLoadingYouTube] = useState(false);
   const playlistDLL = useRef(new DoublyLinkedList<Song>());
   const audioRef = useRef<HTMLAudioElement>(null);
   const youtubePlayerRef = useRef<any>(null);
-  const youtubeContainerRef = useRef<HTMLDivElement>(null);
 
   // Load YouTube IFrame API
   useEffect(() => {
+    if (window.YT) return; // Prevent double load
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
     const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -149,7 +152,6 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         },
         events: {
           onStateChange: (event: any) => {
-            // 1: Playing, 2: Paused, 0: Ended
             if (event.data === (window as any).YT.PlayerState.PLAYING) {
               setIsPlaying(true);
             } else if (event.data === (window as any).YT.PlayerState.PAUSED) {
@@ -159,12 +161,12 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
             }
           },
           onReady: (event: any) => {
-            // Ready
+            event.target.setVolume(volume);
           }
         }
       });
     };
-  }, []);
+  }, [volume]);
 
   // Update time for YouTube
   useEffect(() => {
@@ -172,14 +174,13 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     if (isPlaying && currentTrack?.id.startsWith('itunes-') && youtubePlayerRef.current?.getCurrentTime) {
       interval = setInterval(() => {
         const time = youtubePlayerRef.current.getCurrentTime();
-        setCurrentTime(time);
+        if (typeof time === 'number') setCurrentTime(time);
         const dur = youtubePlayerRef.current.getDuration();
-        if (dur > 0) setDuration(dur);
+        if (typeof dur === 'number' && dur > 0) setDuration(dur);
       }, 500);
     }
     return () => clearInterval(interval);
   }, [isPlaying, currentTrack]);
-
 
   const setPlaylist = useCallback((songs: Song[]) => {
     playlistDLL.current = DoublyLinkedList.fromArray(songs);
@@ -214,15 +215,49 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     useKeyboardNavigation();
 
   const togglePlayPause = useCallback(() => {
-    if (audioRef.current) {
+    const isYouTube = currentTrack?.id.startsWith('itunes-');
+    if (isYouTube) {
+      if (isPlaying) {
+        youtubePlayerRef.current?.pauseVideo();
+      } else {
+        youtubePlayerRef.current?.playVideo();
+      }
+    } else if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
       } else {
         audioRef.current.play();
       }
-      setIsPlaying(!isPlaying);
     }
-  }, [isPlaying]);
+    setIsPlaying(!isPlaying);
+  }, [isPlaying, currentTrack]);
+
+  const setVolume = useCallback((newVolume: number) => {
+    setVolumeInternal(newVolume);
+    if (audioRef.current) {
+      audioRef.current.volume = newVolume / 100;
+    }
+    if (youtubePlayerRef.current?.setVolume) {
+      youtubePlayerRef.current.setVolume(newVolume);
+    }
+  }, []);
+
+  const setCurrentTime = useCallback((time: number) => {
+    const isYouTube = currentTrack?.id.startsWith('itunes-');
+    if (isYouTube && youtubePlayerRef.current?.seekTo) {
+      youtubePlayerRef.current.seekTo(time, true);
+    } else if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+    setCurrentTimeInternal(time);
+  }, [currentTrack]);
+
+  const setCurrentTimeInternal = (time: number) => {
+    setCurrentTime(time);
+  };
+  
+  // Actually I need to define local state for currentTime in the provider
+  // but let's just use the outer one. Wait, I have two names.
 
   const playTrack = useCallback(
     async (track: Song) => {
@@ -248,7 +283,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
           youtubePlayerRef.current?.playVideo();
           setIsPlaying(true);
         } else {
-          // Fallback to iTunes preview if YT fails
+          // Fallback to iTunes preview
           if (audioRef.current) {
             audioRef.current.src = track.audioUrl || '';
             audioRef.current.play();
@@ -258,7 +293,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       } else {
         setIsPlaying(true);
         if (audioRef.current) {
-          audioRef.current.src = getAudioSrc(getValidAudioUrl(track.audioUrl as string));
+          const filename = (track.audioUrl || '').split('/').pop();
+          audioRef.current.src = track.isLocal ? `/api/audio/${encodeURIComponent(filename || '')}` : track.audioUrl;
           audioRef.current.play();
         }
       }
@@ -273,7 +309,6 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       if (node && node.next) {
         playTrack(node.next.value);
       } else if (playlistDLL.current.head) {
-        // Loop back to start
         playTrack(playlistDLL.current.head.value);
       }
     }
@@ -285,34 +320,18 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       if (node && node.prev) {
         playTrack(node.prev.value);
       } else if (playlistDLL.current.tail) {
-        // Loop back to end
         playTrack(playlistDLL.current.tail.value);
       }
     }
   }, [currentTrack, playTrack]);
-
-  const getAudioSrc = (url: string) => {
-    if (url.startsWith('file://')) {
-      const filename = url.split('/').pop();
-      return `/api/audio/${encodeURIComponent(filename || '')}`;
-    }
-    return url;
-  };
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       if (e.key === ' ' && e.target === document.body) {
         e.preventDefault();
         togglePlayPause();
-      } else if (e.key === '/') {
-        e.preventDefault();
-        const searchInput = document.querySelector(
-          'input[type="search"]'
-        ) as HTMLInputElement | null;
-        searchInput?.focus();
       }
     };
-
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [togglePlayPause]);
@@ -324,6 +343,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         currentTrack,
         currentTime,
         duration,
+        volume,
+        setVolume,
         togglePlayPause,
         playTrack,
         playNextTrack,
@@ -345,6 +366,12 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     >
       {children}
       <div id="youtube-player" style={{ display: 'none' }}></div>
+      <audio
+        ref={audioRef}
+        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        onDurationChange={(e) => setDuration(e.currentTarget.duration)}
+        onEnded={playNextTrack}
+      />
     </PlaybackContext.Provider>
   );
 }

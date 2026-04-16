@@ -149,6 +149,8 @@ export let searchSongs = unstable_cache(
         duration: songs.duration,
         imageUrl: songs.imageUrl,
         audioUrl: songs.audioUrl,
+        isLocal: songs.isLocal,
+        favorite: songs.favorite,
         similarity: sql`${similarityExpression}::float`,
       })
       .from(songs)

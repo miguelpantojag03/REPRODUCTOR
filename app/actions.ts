@@ -105,6 +105,17 @@ export async function updateTrackImageAction(_: any, formData: FormData) {
   }
 }
 
+export async function toggleFavoriteAction(trackId: string, isFavorite: boolean) {
+  try {
+    await db.update(songs).set({ favorite: isFavorite }).where(eq(songs.id, trackId));
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (error) {
+    console.error('Error toggling favorite:', error);
+    return { success: false };
+  }
+}
+
 async function ensureDir(dir: string) {
   if (!existsSync(dir)) await fs.mkdir(dir, { recursive: true });
 }
@@ -157,6 +168,7 @@ export async function uploadSongAction(prevState: any, formData: FormData) {
       imageUrl,
       audioUrl,
       isLocal: false,
+      favorite: false,
     }).returning();
 
     revalidatePath('/', 'layout');
@@ -234,6 +246,7 @@ export async function saveOnlineTrackAction(track: any) {
       imageUrl: track.imageUrl,
       audioUrl: track.audioUrl,
       isLocal: false,
+      favorite: false,
     }).returning();
 
     revalidatePath('/', 'layout');
