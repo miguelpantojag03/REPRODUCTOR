@@ -275,6 +275,11 @@ export function TrackTable({
     );
   }
 
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   let filteredSongs = playlist;
   if (query) {
     filteredSongs = filteredSongs.filter(s => 
@@ -283,9 +288,14 @@ export function TrackTable({
       (s.album && s.album.toLowerCase().includes(query.toLowerCase()))
     );
   }
+  
   if (liked) {
-    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
-    filteredSongs = filteredSongs.filter(s => favorites.includes(s.id));
+    if (isClient) {
+      const favorites = JSON.parse(window.localStorage.getItem('favorites') || '[]');
+      filteredSongs = filteredSongs.filter(s => favorites.includes(s.id));
+    } else {
+      filteredSongs = []; // On server render, don't show the list yet or show empty
+    }
   }
 
   return (

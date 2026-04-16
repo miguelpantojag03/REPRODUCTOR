@@ -6,7 +6,6 @@ import { SearchInput } from './search';
 import { getAllPlaylists } from '@/lib/db/queries';
 import Link from 'next/link';
 import { ScrollHeader } from './scroll-header';
-import Link from 'next/link';
 
 export default async function Page({
   searchParams,

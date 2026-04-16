@@ -2,19 +2,22 @@
 
 import Link from 'next/link';
 import { Home, Search, Library } from 'lucide-react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
+import { Suspense } from 'react';
 
-export function MobileNav() {
+function MobileNavContent() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isLiked = searchParams.get('liked') === 'true';
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 h-16 bg-black border-t border-[#282828] z-50 pb-[env(safe-area-inset-bottom)] md:hidden flex justify-around items-center px-4">
       <Link 
         href="/"
-        className={cn("flex flex-col items-center justify-center gap-1 w-16", pathname === '/' && !window.location.search.includes('liked') ? "text-white" : "text-[#b3b3b3]")}
+        className={cn("flex flex-col items-center justify-center gap-1 w-16", pathname === '/' && !isLiked ? "text-white" : "text-[#b3b3b3]")}
       >
-        <Home className={cn("size-6 text-white", pathname === '/' && !window.location.search.includes('liked') ? "fill-white" : "stroke-2")} />
+        <Home className={cn("size-6 text-white", pathname === '/' && !isLiked ? "fill-white" : "stroke-2")} />
         <span className="text-[10px]">Inicio</span>
       </Link>
 
@@ -31,11 +34,19 @@ export function MobileNav() {
 
       <Link 
         href="/?liked=true"
-        className={cn("flex flex-col items-center justify-center gap-1 w-16", pathname === '/' && window.location.search.includes('liked') ? "text-white" : "text-[#b3b3b3]")}
+        className={cn("flex flex-col items-center justify-center gap-1 w-16", pathname === '/' && isLiked ? "text-white" : "text-[#b3b3b3]")}
       >
         <Library className="size-6 stroke-2" />
         <span className="text-[10px]">Biblioteca</span>
       </Link>
     </nav>
   );
+}
+
+export function MobileNav() {
+  return (
+    <Suspense fallback={null}>
+      <MobileNavContent />
+    </Suspense>
+  )
 }

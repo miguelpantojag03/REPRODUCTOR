@@ -2,9 +2,9 @@
 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, MoreVertical, Trash, Home, Search, Library, Music } from 'lucide-react';
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { usePlayback } from '@/app/playback-context';
 import { createPlaylistAction, deletePlaylistAction } from './actions';
@@ -81,6 +81,32 @@ function PlaylistRow({ playlist }: { playlist: Playlist }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+    </li>
+  );
+}
+
+function LikedSongsRow() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isLiked = searchParams.get('liked') === 'true';
+
+  return (
+    <li className="group relative transition-all duration-200 list-none mb-1">
+      <Link
+        href="/?liked=true"
+        className={cn(
+          "flex items-center gap-3 py-2 px-2 rounded-md cursor-pointer transition-colors focus:outline-none",
+          pathname === '/' && isLiked ? "bg-[#333333] text-white font-medium" : "text-[#b3b3b3] hover:text-white hover:bg-[#1a1a1a]"
+        )}
+      >
+        <div className="flex-shrink-0 size-12 bg-gradient-to-br from-[#450af5] to-[#c4efd9] rounded flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
+          <svg role="img" height="16" width="16" aria-hidden="true" viewBox="0 0 16 16" fill="#fff"><path d="M15.724 4.22A4.313 4.313 0 0 0 12.192.814a4.269 4.269 0 0 0-3.622 1.13.837.837 0 0 1-1.14 0 4.272 4.272 0 0 0-6.21 5.855l5.916 7.05a1.128 1.128 0 0 0 1.727 0l5.916-7.05a4.228 4.228 0 0 0 .945-3.577z"></path></svg>
+        </div>
+        <div>
+          <span className="block truncate text-base font-medium">Tus me gusta</span>
+          <span className="block text-sm text-[#b3b3b3] mt-0.5">Lista • Auto</span>
+        </div>
+      </Link>
     </li>
   );
 }
@@ -177,23 +203,9 @@ export function OptimisticPlaylists() {
             onKeyDown={(e) => handleKeyNavigation(e, 'sidebar')}
           >
             {/* Liked Songs Static Row */}
-            <li className="group relative transition-all duration-200 list-none mb-1">
-              <Link
-                href="/?liked=true"
-                className={cn(
-                  "flex items-center gap-3 py-2 px-2 rounded-md cursor-pointer transition-colors focus:outline-none",
-                  pathname === '/' && typeof window !== 'undefined' && window.location.search.includes('liked=true') ? "bg-[#333333] text-white font-medium" : "text-[#b3b3b3] hover:text-white hover:bg-[#1a1a1a]"
-                )}
-              >
-                <div className="flex-shrink-0 size-12 bg-gradient-to-br from-[#450af5] to-[#c4efd9] rounded flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-                  <svg role="img" height="16" width="16" aria-hidden="true" viewBox="0 0 16 16" fill="#fff"><path d="M15.724 4.22A4.313 4.313 0 0 0 12.192.814a4.269 4.269 0 0 0-3.622 1.13.837.837 0 0 1-1.14 0 4.272 4.272 0 0 0-6.21 5.855l5.916 7.05a1.128 1.128 0 0 0 1.727 0l5.916-7.05a4.228 4.228 0 0 0 .945-3.577z"></path></svg>
-                </div>
-                <div>
-                  <span className="block truncate text-base font-medium">Tus me gusta</span>
-                  <span className="block text-sm text-[#b3b3b3] mt-0.5">Lista • Auto</span>
-                </div>
-              </Link>
-            </li>
+            <Suspense fallback={<li className="h-14 mb-1"></li>}>
+              <LikedSongsRow />
+            </Suspense>
 
             {playlists.map((playlist) => (
                <PlaylistRow key={playlist.id} playlist={playlist} />
