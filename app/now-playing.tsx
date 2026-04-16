@@ -2,15 +2,17 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useActionState } from 'react';
-import { PencilIcon, Loader2, CheckIcon } from 'lucide-react';
+import { PencilIcon, Loader2, CheckIcon, MoreHorizontal } from 'lucide-react';
 import { updateTrackAction, updateTrackImageAction } from './actions';
 import { usePlayback } from './playback-context';
 import { getValidImageUrl } from '@/lib/utils';
 import { songs } from '@/lib/db/schema';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function NowPlaying() {
-  const { currentTrack } = usePlayback();
+  const { currentTrack, activePanel, setActivePanel } = usePlayback();
   const [imageState, imageFormAction, imagePending] = useActionState(
     updateTrackImageAction,
     {
@@ -22,9 +24,6 @@ export function NowPlaying() {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-
-    // Delay showing the edit icon
-    // When transitioning from pending back to finished
     if (!imagePending) {
       timer = setTimeout(() => {
         setShowPencil(true);
@@ -44,93 +43,113 @@ export function NowPlaying() {
     : currentTrack.imageUrl;
 
   return (
-    <div className="hidden md:flex flex-col w-56 p-4 bg-[#121212] overflow-auto">
-      <h2 className="mb-3 text-sm font-semibold text-gray-200">Now Playing</h2>
-      <div className="relative w-full aspect-square mb-3 group">
-        <img
-          src={getValidImageUrl(currentImageUrl)}
-          alt={currentTrack.name}
-          className="w-full h-full object-cover"
-        />
-        <form action={imageFormAction} className="absolute inset-0">
-          <input type="hidden" name="trackId" value={currentTrack.id} />
-          <label
-            htmlFor="imageUpload"
-            className="absolute inset-0 cursor-pointer flex items-center justify-center"
-          >
-            <input
-              id="imageUpload"
-              type="file"
-              name="file"
-              className="hidden"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  if (file.size <= 5 * 1024 * 1024) {
-                    e.target.form?.requestSubmit();
-                  } else {
-                    alert('File size exceeds 5MB limit');
-                    e.target.value = '';
-                  }
-                }
-              }}
+    <div
+      className={cn(
+        'hidden xl:flex flex-col w-[320px] bg-[#121212] p-4 my-2 mr-2 rounded-lg transition-colors border-l border-transparent shadow-lg',
+        activePanel === 'now-playing'
+          ? 'bg-[#1a1a1a]'
+          : 'opacity-100'
+      )}
+      onClick={() => setActivePanel('now-playing')}
+    >
+      <div className="flex items-center justify-between mb-4 mt-2 px-2">
+        <h2 className="text-sm font-bold text-white hover:underline cursor-pointer truncate mr-2">
+          {currentTrack.album || currentTrack.name}
+        </h2>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-[#b3b3b3] hover:text-white rounded-full">
+          <MoreHorizontal className="w-5 h-5" />
+        </Button>
+      </div>
+
+      <ScrollArea className="flex-1 -mx-4 px-4 overflow-hidden">
+        <div className="space-y-6 pb-20">
+          <div className="relative aspect-square w-full rounded-md overflow-hidden bg-[#282828] shadow-[0_8px_24px_rgba(0,0,0,0.5)] group">
+            <img
+              src={getValidImageUrl(currentImageUrl)}
+              alt="Album cover"
+              className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
             />
-            <div
-              className={cn(
-                'group-hover:bg-black group-hover:bg-opacity-50 rounded-full p-2',
-                imagePending && 'bg-opacity-50'
-              )}
-            >
-              {imagePending ? (
-                <Loader2 className="w-6 h-6 text-white animate-spin" />
-              ) : (
-                showPencil && (
-                  <PencilIcon className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                )
-              )}
-            </div>
-          </label>
-        </form>
-      </div>
-      <div className="w-full space-y-1">
-        <EditableInput
-          initialValue={currentTrack.name}
-          trackId={currentTrack.id}
-          field="name"
-          label="Title"
-        />
-        <EditableInput
-          initialValue={currentTrack.artist}
-          trackId={currentTrack.id}
-          field="artist"
-          label="Artist"
-        />
-        <EditableInput
-          initialValue={currentTrack.genre || ''}
-          trackId={currentTrack.id}
-          field="genre"
-          label="Genre"
-        />
-        <EditableInput
-          initialValue={currentTrack.album || ''}
-          trackId={currentTrack.id}
-          field="album"
-          label="Album"
-        />
-        <EditableInput
-          initialValue={currentTrack.bpm?.toString() || ''}
-          trackId={currentTrack.id}
-          field="bpm"
-          label="BPM"
-        />
-        <EditableInput
-          initialValue={currentTrack.key || ''}
-          trackId={currentTrack.id}
-          field="key"
-          label="Key"
-        />
-      </div>
+            <form action={imageFormAction} className="absolute inset-0">
+              <input type="hidden" name="trackId" value={currentTrack.id} />
+              <label
+                htmlFor="imageUpload"
+                className="absolute inset-0 cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 transition-opacity"
+              >
+                <input
+                  id="imageUpload"
+                  type="file"
+                  name="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size <= 5 * 1024 * 1024) {
+                        e.target.form?.requestSubmit();
+                      } else {
+                        alert('File size exceeds 5MB limit');
+                        e.target.value = '';
+                      }
+                    }
+                  }}
+                />
+                <div
+                  className={cn(
+                    'rounded-full p-2',
+                    imagePending && 'bg-opacity-50'
+                  )}
+                >
+                  {imagePending ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    showPencil && (
+                      <PencilIcon className="w-6 h-6 text-white" />
+                    )
+                  )}
+                </div>
+              </label>
+            </form>
+          </div>
+          <div className="w-full space-y-1">
+            <EditableInput
+              initialValue={currentTrack.name}
+              trackId={currentTrack.id}
+              field="name"
+              label="Title"
+            />
+            <EditableInput
+              initialValue={currentTrack.artist}
+              trackId={currentTrack.id}
+              field="artist"
+              label="Artist"
+            />
+            <EditableInput
+              initialValue={currentTrack.genre || ''}
+              trackId={currentTrack.id}
+              field="genre"
+              label="Genre"
+            />
+            <EditableInput
+              initialValue={currentTrack.album || ''}
+              trackId={currentTrack.id}
+              field="album"
+              label="Album"
+            />
+            <EditableInput
+              initialValue={currentTrack.bpm?.toString() || ''}
+              trackId={currentTrack.id}
+              field="bpm"
+              label="BPM"
+            />
+            <EditableInput
+              initialValue={currentTrack.key || ''}
+              trackId={currentTrack.id}
+              field="key"
+              label="Key"
+            />
+          </div>
+        </div>
+      </ScrollArea>
     </div>
   );
 }
@@ -201,14 +220,14 @@ export function EditableInput({
   }
 
   return (
-    <div className="space-y-1 group">
+    <div className="space-y-1 group px-2">
       <label
         htmlFor={`${field}-input`}
-        className="text-xs text-muted-foreground"
+        className="text-[11px] uppercase tracking-wider text-[#a7a7a7] font-bold"
       >
         {label}
       </label>
-      <div className="flex items-center justify-between w-full text-xs h-3 border-b border-transparent focus-within:border-white transition-colors">
+      <div className="flex items-center justify-between w-full text-sm h-6 border-b border-transparent focus-within:border-[#1db954] transition-colors">
         {isEditing ? (
           <form ref={formRef} action={formAction} className="w-full">
             <input type="hidden" name="trackId" value={trackId} />
@@ -223,7 +242,7 @@ export function EditableInput({
               onKeyDown={handleKeyDown}
               onBlur={handleSubmit}
               className={cn(
-                'bg-transparent w-full focus:outline-none p-0',
+                'bg-transparent w-full focus:outline-none p-0 text-white',
                 state.error && 'text-red-500'
               )}
               aria-invalid={state.error ? 'true' : 'false'}
@@ -243,19 +262,19 @@ export function EditableInput({
             }}
             aria-label={`Edit ${label}`}
           >
-            <span className={cn(value ? '' : 'text-muted-foreground')}>
+            <span className={cn(value ? 'text-white' : 'text-[#a7a7a7]')}>
               {value || '-'}
             </span>
           </div>
         )}
         <div className="flex items-center">
           {pending ? (
-            <Loader2 className="size-3 animate-spin" />
+            <Loader2 className="size-3 animate-spin text-[#1db954]" />
           ) : showCheck ? (
-            <CheckIcon className="size-3 text-green-500" />
+            <CheckIcon className="size-3 text-[#1db954]" />
           ) : (
             !isEditing && (
-              <PencilIcon className="size-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <PencilIcon className="size-3 text-[#b3b3b3] opacity-0 group-hover:opacity-100 transition-opacity" />
             )
           )}
         </div>

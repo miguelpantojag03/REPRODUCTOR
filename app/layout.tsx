@@ -7,6 +7,7 @@ import { PlaybackProvider } from './playback-context';
 import { getAllPlaylists } from '@/lib/db/queries';
 import { OptimisticPlaylists } from './optimistic-playlists';
 import { PlaylistProvider } from './hooks/use-playlist';
+import { MobileNav } from './mobile-nav';
 import { PlaybackControls } from './playback-controls';
 
 export const metadata: Metadata = {
@@ -33,7 +34,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={inter.className}>
-      <body className="dark flex flex-col md:flex-row h-[100dvh] text-gray-200 bg-[#0A0A0A]">
+      <body className="dark flex flex-col md:flex-row h-[100dvh] text-gray-200 bg-black">
         <PlaybackProvider>
           <Suspense fallback={null}>
             <PlaylistProvider playlistsPromise={playlistsPromise}>
@@ -43,6 +44,7 @@ export default function RootLayout({
           </Suspense>
           <NowPlaying />
           <PlaybackControls />
+          <MobileNav />
         </PlaybackProvider>
       </body>
     </html>

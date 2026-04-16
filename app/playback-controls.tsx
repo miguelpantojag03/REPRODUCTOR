@@ -12,10 +12,32 @@ import {
   VolumeX,
 } from 'lucide-react';
 import { usePlayback } from '@/app/playback-context';
-import { getValidImageUrl } from '@/lib/utils';
+import { getValidImageUrl, cn } from '@/lib/utils';
 
 export function TrackInfo() {
   let { currentTrack } = usePlayback();
+  let [isLiked, setIsLiked] = useState(false);
+
+  useEffect(() => {
+    if (currentTrack) {
+      const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+      setIsLiked(favorites.includes(currentTrack.id));
+    }
+  }, [currentTrack]);
+
+  const toggleFavorite = () => {
+    if (!currentTrack) return;
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    let newFavorites;
+    if (favorites.includes(currentTrack.id)) {
+      newFavorites = favorites.filter((id: string) => id !== currentTrack.id);
+      setIsLiked(false);
+    } else {
+      newFavorites = [...favorites, currentTrack.id];
+      setIsLiked(true);
+    }
+    localStorage.setItem('favorites', JSON.stringify(newFavorites));
+  };
 
   return (
     <div className="flex items-center space-x-3 w-1/3">
@@ -37,9 +59,10 @@ export function TrackInfo() {
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 flex-shrink-0 hidden sm:flex"
+            className="h-8 w-8 flex-shrink-0 hidden sm:flex hover:bg-transparent"
+            onClick={toggleFavorite}
           >
-            <Heart className="w-4 h-4" />
+            <Heart className={cn("w-4 h-4 transition-colors", isLiked ? "text-green-500 fill-green-500" : "text-gray-400 hover:text-white")} />
           </Button>
         </>
       )}
@@ -61,33 +84,31 @@ export function PlaybackButtons() {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-8 w-8 text-[#b3b3b3] hover:text-white"
         onClick={playPreviousTrack}
         disabled={!currentTrack}
       >
-        <SkipBack className="w-4 h-4 stroke-[1.5]" />
+        <SkipBack className="w-4 h-4 fill-current stroke-0" />
       </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
+      <button
+        className="h-8 w-8 flex items-center justify-center bg-white text-black rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"
         onClick={togglePlayPause}
         disabled={!currentTrack}
       >
         {isPlaying ? (
-          <Pause className="w-5 h-5 stroke-[1.5]" />
+          <Pause className="w-4 h-4 fill-current stroke-0" />
         ) : (
-          <Play className="w-5 h-5 stroke-[1.5]" />
+          <Play className="w-4 h-4 fill-current stroke-0 ml-0.5" />
         )}
-      </Button>
+      </button>
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-8 w-8 text-[#b3b3b3] hover:text-white"
         onClick={playNextTrack}
         disabled={!currentTrack}
       >
-        <SkipForward className="w-4 h-4 stroke-[1.5]" />
+        <SkipForward className="w-4 h-4 fill-current stroke-0" />
       </Button>
     </div>
   );
@@ -115,23 +136,25 @@ export function ProgressBar() {
   };
 
   return (
-    <div className="flex items-center w-full mt-1">
-      <span className="text-xs tabular-nums text-gray-400">
+    <div className="flex items-center w-full mt-1 max-w-[600px]">
+      <span className="text-[11px] tabular-nums text-[#a7a7a7] min-w-[40px] text-right">
         {formatTime(currentTime)}
       </span>
       <div
         ref={progressBarRef}
-        className="flex-grow mx-2 h-1 bg-[#3E3E3E] rounded-full cursor-pointer relative"
+        className="flex-grow mx-2 h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative group flex items-center"
         onClick={handleProgressChange}
       >
         <div
-          className="absolute top-0 left-0 h-full bg-white rounded-full"
-          style={{
-            width: `${(currentTime / duration) * 100}%`,
-          }}
+          className="absolute top-0 left-0 h-full bg-white group-hover:bg-[#1db954] rounded-full transition-colors"
+          style={{ width: `${(currentTime / duration) * 100}%` }}
+        ></div>
+        <div 
+          className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover:opacity-100 shadow disabled shadow-black transition-opacity"
+          style={{ left: `calc(${(currentTime / duration) * 100}% - 6px)` }}
         ></div>
       </div>
-      <span className="text-xs tabular-nums text-gray-400">
+      <span className="text-[11px] tabular-nums text-[#a7a7a7] min-w-[40px] text-left">
         {formatTime(duration)}
       </span>
     </div>
@@ -327,7 +350,7 @@ export function PlaybackControls() {
   ]);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 flex items-center justify-between p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] bg-[#181818] border-t border-[#282828]">
+    <div className="fixed bottom-16 md:bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#000000] border-t border-transparent z-50">
       <audio ref={audioRef} />
       <TrackInfo />
       <div className="flex flex-col items-center w-1/3">

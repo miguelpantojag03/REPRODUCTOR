@@ -16,37 +16,35 @@ export function SearchInput(props: { value?: string }) {
   }, [router, value]);
 
   return (
-    <div className="relative">
+    <div className="relative w-64 group">
       <Input
         ref={inputRef}
         type="search"
-        className="mb-4 bg-[#1A1A1A] border-[#333] text-xs h-8 focus-visible:ring-0 pr-8 [&::-webkit-search-cancel-button]:appearance-none"
+        className="bg-white/10 border-transparent text-sm h-10 w-full rounded-full pl-10 focus-visible:ring-1 focus-visible:ring-white/30 focus:bg-white/20 transition-all text-white placeholder-gray-400 [&::-webkit-search-cancel-button]:appearance-none"
         style={{
           WebkitAppearance: 'none',
           MozAppearance: 'none',
           appearance: 'none',
         }}
-        placeholder="Search"
+        placeholder="¿Qué quieres reproducir?"
         value={value}
         onChange={(e) => {
           setValue(e.currentTarget.value);
         }}
       />
-      {value ? (
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+         <svg className="w-4 h-4 text-gray-400 group-focus-within:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+      </div>
+      {value && (
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+          className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-gray-400 hover:text-white rounded-full bg-transparent hover:bg-white/10"
           onClick={() => setValue('')}
         >
           <X className="h-4 w-4" />
-          <span className="sr-only">Clear search</span>
         </Button>
-      ) : (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 flex items-center justify-center bg-neutral-800 rounded text-neutral-400 border border-neutral-700">
-          <span className="font-mono text-xs">/</span>
-        </div>
       )}
     </div>
   );

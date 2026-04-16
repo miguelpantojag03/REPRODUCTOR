@@ -90,15 +90,15 @@ function TrackRow({
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, index)}
       className={cn(
-        "group cursor-pointer hover:bg-[#1A1A1A] select-none relative transition-all duration-200",
-        isCurrentTrack && "bg-[#1A1A1A]",
-        isDragOver && "border-t-2 border-green-500 bg-green-500/5"
+        "group cursor-pointer hover:bg-white/10 select-none relative transition-colors duration-100",
+        isCurrentTrack && "bg-white/5",
+        isDragOver && "border-t-2 border-[#1db954] bg-[#1db954]/5"
       )}
       tabIndex={0}
       onClick={onClickTrackRow}
       onKeyDown={onKeyDownTrackRow}
     >
-      <td className="py-[2px] pl-3 pr-2 tabular-nums w-10 text-center">
+      <td className="py-[2px] pl-3 pr-2 tabular-nums w-10 text-center relative group-hover:hidden">
         {isCurrentTrack && isPlaying ? (
           <div className="flex items-end justify-center space-x-[2px] size-[0.65rem] mx-auto">
             <div className="w-1 bg-green-500 animate-now-playing-1"></div>
@@ -106,10 +106,13 @@ function TrackRow({
             <div className="w-1 bg-green-500 animate-now-playing-3 [animation-delay:0.4s]"></div>
           </div>
         ) : (
-          <span className={cn("text-gray-400", isCurrentTrack && "text-green-500")}>
+          <span className={cn("text-gray-400 group-hover:hidden", isCurrentTrack && "text-green-500")}>
             {index + 1}
           </span>
         )}
+      </td>
+      <td className="py-[2px] pl-3 pr-2 tabular-nums w-10 text-center hidden group-hover:table-cell">
+         <Play className={cn("size-4 mx-auto", isCurrentTrack ? "text-green-500" : "text-white")} fill="currentColor" onClick={(e) => { e.stopPropagation(); playTrack(track);}}/>
       </td>
       <td className="py-[2px] px-2">
         <div className="flex items-center">
@@ -209,8 +212,10 @@ import { cn } from '@/lib/utils';
 
 export function TrackTable({
   query,
+  liked,
 }: {
   query?: string;
+  liked?: boolean;
 }) {
   const tableRef = useRef<HTMLTableElement>(null);
   const { registerPanelRef, setActivePanel, setPlaylist, reorderTrack, playlist } = usePlayback();
@@ -270,13 +275,18 @@ export function TrackTable({
     );
   }
 
-  const filteredSongs = query 
-    ? playlist.filter(s => 
-        s.name.toLowerCase().includes(query.toLowerCase()) || 
-        s.artist.toLowerCase().includes(query.toLowerCase()) ||
-        (s.album && s.album.toLowerCase().includes(query.toLowerCase()))
-      )
-    : playlist;
+  let filteredSongs = playlist;
+  if (query) {
+    filteredSongs = filteredSongs.filter(s => 
+      s.name.toLowerCase().includes(query.toLowerCase()) || 
+      s.artist.toLowerCase().includes(query.toLowerCase()) ||
+      (s.album && s.album.toLowerCase().includes(query.toLowerCase()))
+    );
+  }
+  if (liked) {
+    const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
+    filteredSongs = filteredSongs.filter(s => favorites.includes(s.id));
+  }
 
   return (
     <table
@@ -284,7 +294,7 @@ export function TrackTable({
       className="w-full text-xs"
       onClick={() => setActivePanel('tracklist')}
     >
-      <thead className="sticky top-0 bg-[#0A0A0A] z-10 border-b border-[#282828]">
+      <thead className="sticky top-16 bg-[#121212]/95 backdrop-blur-md z-10 border-b border-white/5">
         <tr className="text-left text-gray-400 uppercase text-[10px] tracking-widest">
           <th className="py-3 pl-3 pr-2 font-medium w-10 text-center">#</th>
           <th className="py-3 px-2 font-medium">Título</th>
