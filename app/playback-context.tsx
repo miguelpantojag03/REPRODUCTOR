@@ -13,7 +13,7 @@ import { Song } from '@/lib/db/types';
 import { DoublyLinkedList } from '@/lib/dll';
 import { getValidAudioUrl } from '@/lib/utils';
 
-type Panel = 'sidebar' | 'tracklist';
+type Panel = 'sidebar' | 'tracklist' | 'now-playing';
 
 type PlaybackContextType = {
   isPlaying: boolean;
@@ -52,6 +52,7 @@ function useKeyboardNavigation() {
   >({
     sidebar: null,
     tracklist: null,
+    'now-playing': null,
   });
 
   const registerPanelRef = useCallback(

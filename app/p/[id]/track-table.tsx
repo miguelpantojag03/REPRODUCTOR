@@ -213,16 +213,23 @@ import { cn } from '@/lib/utils';
 export function TrackTable({
   query,
   liked,
+  playlist: playlistProp,
 }: {
   query?: string;
   liked?: boolean;
+  playlist?: PlaylistWithSongs;
 }) {
   const tableRef = useRef<HTMLTableElement>(null);
   const { registerPanelRef, setActivePanel, setPlaylist, reorderTrack, playlist } = usePlayback();
+  const [isClient, setIsClient] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [draggedTrackId, setDraggedTrackId] = useState<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedTrackId(id);
@@ -258,13 +265,19 @@ export function TrackTable({
 
   useEffect(() => {
     registerPanelRef('tracklist', tableRef);
-    fetchSongs();
+    
+    if (playlistProp) {
+      setPlaylist(playlistProp.songs);
+      setIsLoading(false);
+    } else {
+      fetchSongs();
+    }
     
     // Listen for refresh events (custom)
     const handleRefresh = () => fetchSongs();
     window.addEventListener('refresh-songs', handleRefresh);
     return () => window.removeEventListener('refresh-songs', handleRefresh);
-  }, [registerPanelRef, fetchSongs]);
+  }, [registerPanelRef, fetchSongs, playlistProp, setPlaylist]);
 
   if (isLoading) {
     return (
@@ -275,10 +288,7 @@ export function TrackTable({
     );
   }
 
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+
 
   let filteredSongs = playlist;
   if (query) {

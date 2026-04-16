@@ -221,6 +221,8 @@ export async function uploadSongAction(
       !process.env.BLOB_READ_WRITE_TOKEN ||
       process.env.BLOB_READ_WRITE_TOKEN.startsWith('placeholder');
 
+    let imageUrl: string | null = null;
+
     // 2. Manejar Carátula si existe
     if (metadata.common.picture && metadata.common.picture.length > 0) {
       const picture = metadata.common.picture[0];
