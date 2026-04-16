@@ -12,6 +12,7 @@ import {
 import { Song } from '@/lib/db/types';
 import { DoublyLinkedList } from '@/lib/dll';
 import { getValidAudioUrl } from '@/lib/utils';
+import { getYouTubeIdAction } from './actions';
 
 type Panel = 'sidebar' | 'tracklist' | 'now-playing';
 
@@ -39,6 +40,7 @@ type PlaybackContextType = {
     ref: React.RefObject<HTMLElement | null>
   ) => void;
   handleKeyNavigation: (e: React.KeyboardEvent, panel: Panel) => void;
+  isLoadingYouTube: boolean;
 };
 
 const PlaybackContext = createContext<PlaybackContextType | undefined>(
@@ -121,8 +123,63 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playlist, setPlaylistInternal] = useState<Song[]>([]);
+  const [isLoadingYouTube, setIsLoadingYouTube] = useState(false);
   const playlistDLL = useRef(new DoublyLinkedList<Song>());
   const audioRef = useRef<HTMLAudioElement>(null);
+  const youtubePlayerRef = useRef<any>(null);
+  const youtubeContainerRef = useRef<HTMLDivElement>(null);
+
+  // Load YouTube IFrame API
+  useEffect(() => {
+    const tag = document.createElement('script');
+    tag.src = 'https://www.youtube.com/iframe_api';
+    const firstScriptTag = document.getElementsByTagName('script')[0];
+    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+
+    (window as any).onYouTubeIframeAPIReady = () => {
+      youtubePlayerRef.current = new (window as any).YT.Player('youtube-player', {
+        height: '0',
+        width: '0',
+        videoId: '',
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          showinfo: 0,
+          modestbranding: 1,
+        },
+        events: {
+          onStateChange: (event: any) => {
+            // 1: Playing, 2: Paused, 0: Ended
+            if (event.data === (window as any).YT.PlayerState.PLAYING) {
+              setIsPlaying(true);
+            } else if (event.data === (window as any).YT.PlayerState.PAUSED) {
+              setIsPlaying(false);
+            } else if (event.data === (window as any).YT.PlayerState.ENDED) {
+              playNextTrack();
+            }
+          },
+          onReady: (event: any) => {
+            // Ready
+          }
+        }
+      });
+    };
+  }, []);
+
+  // Update time for YouTube
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying && currentTrack?.id.startsWith('itunes-') && youtubePlayerRef.current?.getCurrentTime) {
+      interval = setInterval(() => {
+        const time = youtubePlayerRef.current.getCurrentTime();
+        setCurrentTime(time);
+        const dur = youtubePlayerRef.current.getDuration();
+        if (dur > 0) setDuration(dur);
+      }, 500);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTrack]);
+
 
   const setPlaylist = useCallback((songs: Song[]) => {
     playlistDLL.current = DoublyLinkedList.fromArray(songs);
@@ -168,13 +225,42 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   }, [isPlaying]);
 
   const playTrack = useCallback(
-    (track: Song) => {
+    async (track: Song) => {
       setCurrentTrack(track);
-      setIsPlaying(true);
       setCurrentTime(0);
+      
+      // Stop other sources
       if (audioRef.current) {
-        audioRef.current.src = getAudioSrc(getValidAudioUrl(track.audioUrl as string));
-        audioRef.current.play();
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+      if (youtubePlayerRef.current?.pauseVideo) {
+        youtubePlayerRef.current.pauseVideo();
+      }
+
+      if (track.id.startsWith('itunes-')) {
+        setIsLoadingYouTube(true);
+        const result = await getYouTubeIdAction(track.name, track.artist);
+        setIsLoadingYouTube(false);
+        
+        if (result.success && result.videoId) {
+          youtubePlayerRef.current?.loadVideoById(result.videoId);
+          youtubePlayerRef.current?.playVideo();
+          setIsPlaying(true);
+        } else {
+          // Fallback to iTunes preview if YT fails
+          if (audioRef.current) {
+            audioRef.current.src = track.audioUrl || '';
+            audioRef.current.play();
+            setIsPlaying(true);
+          }
+        }
+      } else {
+        setIsPlaying(true);
+        if (audioRef.current) {
+          audioRef.current.src = getAudioSrc(getValidAudioUrl(track.audioUrl as string));
+          audioRef.current.play();
+        }
       }
       setActivePanel('tracklist');
     },
@@ -254,9 +340,11 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         setActivePanel,
         registerPanelRef,
         handleKeyNavigation,
+        isLoadingYouTube,
       }}
     >
       {children}
+      <div id="youtube-player" style={{ display: 'none' }}></div>
     </PlaybackContext.Provider>
   );
 }

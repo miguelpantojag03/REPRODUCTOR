@@ -4,8 +4,9 @@ import { Suspense } from 'react';
 import { Loader2, UserRound, Music } from 'lucide-react';
 import { SearchInput } from './search';
 import { getAllPlaylists } from '@/lib/db/queries';
-import { searchOnlineTracksAction } from './actions';
+import { searchOnlineTracksAction, searchOnlineAlbumsAction } from './actions';
 import { OnlineResults } from './online-results';
+import { OnlineAlbums } from './online-albums';
 import Link from 'next/link';
 import { ScrollHeader } from './scroll-header';
 
@@ -20,6 +21,7 @@ export default async function Page({
   const playlists = await getAllPlaylists();
   const topPlaylists = playlists.slice(0, 6);
   const onlineTracks = query ? await searchOnlineTracksAction(query) : [];
+  const onlineAlbums = query ? await searchOnlineAlbumsAction(query) : [];
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#121212] rounded-lg my-2 mr-2 relative">
@@ -58,6 +60,10 @@ export default async function Page({
               <TrackTable query={query} liked={liked} />
             </Suspense>
           </section>
+
+          {query && onlineAlbums.length > 0 && (
+            <OnlineAlbums albums={onlineAlbums} />
+          )}
 
           {query && onlineTracks.length > 0 && (
             <OnlineResults tracks={onlineTracks} />

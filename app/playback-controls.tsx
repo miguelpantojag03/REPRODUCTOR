@@ -10,6 +10,9 @@ import {
   SkipForward,
   Volume2,
   VolumeX,
+  Shuffle,
+  Repeat,
+  Loader2,
 } from 'lucide-react';
 import { usePlayback } from '@/app/playback-context';
 import { getValidImageUrl, cn } from '@/lib/utils';
@@ -71,16 +74,25 @@ export function TrackInfo() {
 }
 
 export function PlaybackButtons() {
-  let {
+  const {
     isPlaying,
     togglePlayPause,
-    playPreviousTrack,
     playNextTrack,
+    playPreviousTrack,
     currentTrack,
+    isLoadingYouTube,
   } = usePlayback();
 
   return (
-    <div className="flex items-center space-x-2">
+    <div className="flex items-center space-x-6 mb-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-[#b3b3b3] hover:text-white"
+        disabled={!currentTrack}
+      >
+        <Shuffle className="w-4 h-4" />
+      </Button>
       <Button
         variant="ghost"
         size="icon"
@@ -88,19 +100,22 @@ export function PlaybackButtons() {
         onClick={playPreviousTrack}
         disabled={!currentTrack}
       >
-        <SkipBack className="w-4 h-4 fill-current stroke-0" />
+        <SkipBack className="w-5 h-5 fill-current" />
       </Button>
-      <button
-        className="h-8 w-8 flex items-center justify-center bg-white text-black rounded-full hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"
+      <Button
+        size="icon"
+        className="h-8 w-8 bg-white text-black hover:scale-105 transition-transform rounded-full flex items-center justify-center p-0"
         onClick={togglePlayPause}
-        disabled={!currentTrack}
+        disabled={!currentTrack || isLoadingYouTube}
       >
-        {isPlaying ? (
-          <Pause className="w-4 h-4 fill-current stroke-0" />
+        {isLoadingYouTube ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : isPlaying ? (
+          <Pause className="w-5 h-5 fill-current" />
         ) : (
-          <Play className="w-4 h-4 fill-current stroke-0 ml-0.5" />
+          <Play className="w-5 h-5 fill-current ml-0.5" />
         )}
-      </button>
+      </Button>
       <Button
         variant="ghost"
         size="icon"
@@ -108,7 +123,15 @@ export function PlaybackButtons() {
         onClick={playNextTrack}
         disabled={!currentTrack}
       >
-        <SkipForward className="w-4 h-4 fill-current stroke-0" />
+        <SkipForward className="w-5 h-5 fill-current" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-[#b3b3b3] hover:text-white"
+        disabled={!currentTrack}
+      >
+        <Repeat className="w-4 h-4" />
       </Button>
     </div>
   );
