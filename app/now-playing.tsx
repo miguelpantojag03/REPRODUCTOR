@@ -11,8 +11,11 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+import { useToast } from './toast-provider';
+
 export function NowPlaying() {
   const { currentTrack, activePanel, setActivePanel } = usePlayback();
+  const { toast } = useToast();
   const [imageState, imageFormAction, imagePending] = useActionState(
     updateTrackImageAction,
     {
@@ -21,6 +24,12 @@ export function NowPlaying() {
     }
   );
   const [showPencil, setShowPencil] = useState(false);
+
+  useEffect(() => {
+    if (imageState?.success) {
+      toast('Carátula actualizada', 'success');
+    }
+  }, [imageState, toast]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -45,14 +54,24 @@ export function NowPlaying() {
   return (
     <div
       className={cn(
-        'hidden xl:flex flex-col w-[320px] bg-[#121212] p-4 my-2 mr-2 rounded-lg transition-colors border-l border-transparent shadow-lg',
+        'hidden lg:flex flex-col w-[320px] bg-[#121212] p-4 my-2 mr-2 rounded-lg transition-all duration-300 border-l border-transparent shadow-lg relative overflow-hidden group/panel',
         activePanel === 'now-playing'
-          ? 'bg-[#1a1a1a]'
+          ? 'bg-[#1a1a1a] ring-1 ring-white/10'
           : 'opacity-100'
       )}
       onClick={() => setActivePanel('now-playing')}
     >
-      <div className="flex items-center justify-between mb-4 mt-2 px-2">
+      {/* Adaptive Background Blur */}
+      <div 
+        className="absolute inset-x-0 top-0 h-64 opacity-20 blur-3xl pointer-events-none transition-all duration-1000"
+        style={{ 
+          backgroundImage: `url(${getValidImageUrl(currentImageUrl)})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      />
+
+      <div className="relative z-10 flex items-center justify-between mb-4 mt-2 px-2">
         <h2 className="text-sm font-bold text-white hover:underline cursor-pointer truncate mr-2">
           {currentTrack.album || currentTrack.name}
         </h2>
@@ -61,7 +80,7 @@ export function NowPlaying() {
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 -mx-4 px-4 overflow-hidden">
+      <ScrollArea className="relative z-10 flex-1 -mx-4 px-4 overflow-hidden">
         <div className="space-y-6 pb-20">
           <div className="relative aspect-square w-full rounded-md overflow-hidden bg-[#282828] shadow-[0_8px_24px_rgba(0,0,0,0.5)] group">
             <img
@@ -87,7 +106,7 @@ export function NowPlaying() {
                       if (file.size <= 5 * 1024 * 1024) {
                         e.target.form?.requestSubmit();
                       } else {
-                        alert('File size exceeds 5MB limit');
+                        toast('El archivo supera el límite de 5MB', 'error');
                         e.target.value = '';
                       }
                     }

@@ -165,7 +165,6 @@ export function Volume() {
   let { audioRef, currentTrack } = usePlayback();
   let [volume, setVolume] = useState(100);
   let [isMuted, setIsMuted] = useState(false);
-  let [isVolumeVisible, setIsVolumeVisible] = useState(false);
   let volumeBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -188,53 +187,43 @@ export function Volume() {
   };
 
   let toggleMute = () => {
-    if (audioRef.current) {
-      if (isMuted) {
-        audioRef.current.volume = volume / 100;
-        setIsMuted(false);
-      } else {
-        audioRef.current.volume = 0;
-        setIsMuted(true);
-      }
+    if (isMuted) {
+      setIsMuted(false);
+    } else {
+      setIsMuted(true);
     }
   };
 
-  let toggleVolumeVisibility = () => {
-    setIsVolumeVisible(!isVolumeVisible);
-  };
-
   return (
-    <div className="relative">
+    <div className="flex items-center group/vol w-32 md:w-40 lg:w-48">
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
-        onClick={() => {
-          toggleMute();
-          toggleVolumeVisibility();
-        }}
+        className="h-8 w-8 text-[#b3b3b3] hover:text-white flex-shrink-0"
+        onClick={toggleMute}
         disabled={!currentTrack}
       >
-        {isMuted ? (
-          <VolumeX className="w-4 h-4 text-gray-400" />
+        {isMuted || volume === 0 ? (
+          <VolumeX className="w-4 h-4" />
         ) : (
-          <Volume2 className="w-4 h-4 text-gray-400" />
+          <Volume2 className="w-4 h-4" />
         )}
       </Button>
-      {isVolumeVisible && (
-        <div className="absolute bottom-full right-0 mb-2 p-2 bg-[#282828] rounded-md shadow-lg">
-          <div
-            ref={volumeBarRef}
-            className="w-20 h-1 bg-[#3E3E3E] rounded-full cursor-pointer relative"
-            onClick={handleVolumeChange}
-          >
-            <div
-              className="absolute top-0 left-0 h-full bg-white rounded-full"
-              style={{ width: `${volume}%` }}
-            ></div>
-          </div>
-        </div>
-      )}
+      
+      <div
+        ref={volumeBarRef}
+        className="flex-grow h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative flex items-center group"
+        onClick={handleVolumeChange}
+      >
+        <div
+          className="absolute top-0 left-0 h-full bg-white group-hover:bg-[#1db954] rounded-full transition-colors"
+          style={{ width: `${isMuted ? 0 : volume}%` }}
+        ></div>
+        <div 
+          className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover:opacity-100 shadow shadow-black transition-opacity"
+          style={{ left: `calc(${isMuted ? 0 : volume}% - 6px)` }}
+        ></div>
+      </div>
     </div>
   );
 }

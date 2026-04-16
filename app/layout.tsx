@@ -9,6 +9,8 @@ import { OptimisticPlaylists } from './optimistic-playlists';
 import { PlaylistProvider } from './hooks/use-playlist';
 import { MobileNav } from './mobile-nav';
 import { PlaybackControls } from './playback-controls';
+import { ToastProvider } from './toast-provider';
+import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
   title: 'Next.js Music Player',
@@ -33,18 +35,20 @@ export default function RootLayout({
   const playlistsPromise = getAllPlaylists();
 
   return (
-    <html lang="en" className={inter.className}>
-      <body className="dark flex flex-col md:flex-row h-[100dvh] text-gray-200 bg-black">
+    <html lang="en" className={cn(inter.className, "dark")}>
+      <body className="flex flex-col md:flex-row h-[100dvh] text-gray-200 bg-black overflow-hidden selection:bg-[#1db954]/30">
         <PlaybackProvider>
-          <Suspense fallback={null}>
-            <PlaylistProvider playlistsPromise={playlistsPromise}>
-              <OptimisticPlaylists />
-              {children}
-            </PlaylistProvider>
-          </Suspense>
-          <NowPlaying />
-          <PlaybackControls />
-          <MobileNav />
+          <ToastProvider>
+            <Suspense fallback={<div className="h-[100dvh] w-full bg-black animate-pulse" />}>
+              <PlaylistProvider playlistsPromise={playlistsPromise}>
+                <OptimisticPlaylists />
+                {children}
+                <NowPlaying />
+                <PlaybackControls />
+                <MobileNav />
+              </PlaylistProvider>
+            </Suspense>
+          </ToastProvider>
         </PlaybackProvider>
       </body>
     </html>

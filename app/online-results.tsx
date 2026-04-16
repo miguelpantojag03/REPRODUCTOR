@@ -4,38 +4,42 @@ import { Song } from '@/lib/db/types';
 import { formatDuration, getValidImageUrl } from '@/lib/utils';
 import { usePlayback } from '@/app/playback-context';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, Heart, Globe, Plus } from 'lucide-react';
+import { Play, Pause, Heart, Globe, Plus, Loader2 } from 'lucide-react';
 import { saveOnlineTrackAction } from './actions';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
+import { useToast } from './toast-provider';
+
 export function OnlineResults({ tracks }: { tracks: any[] }) {
   const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayback();
   const [savingId, setSavingId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const handleSaveTrack = async (track: any) => {
     setSavingId(track.id);
     try {
       const result = await saveOnlineTrackAction(track);
       if (result.success) {
-        // Add to local favorites
         const favorites = JSON.parse(localStorage.getItem('favorites') || '[]');
         if (!favorites.includes(track.id)) {
           localStorage.setItem('favorites', JSON.stringify([...favorites, track.id]));
         }
-        // Force refresh local table if needed (could use custom event)
         window.dispatchEvent(new CustomEvent('refresh-songs'));
-        alert(`"${track.name}" guardada en tu biblioteca.`);
+        toast(`"${track.name}" guardada en tu biblioteca`, 'success');
       }
     } catch (err) {
       console.error(err);
+      toast('Error al guardar la canción', 'error');
     } finally {
       setSavingId(null);
     }
   };
 
+  if (!tracks || tracks.length === 0) return null;
+
   return (
-    <section className="mt-8 mb-12">
+    <section className="mt-8 mb-12 animate-in fade-in slide-in-from-top-4 duration-500">
       <div className="flex items-center gap-2 mb-4">
         <Globe className="size-5 text-indigo-400" />
         <h2 className="text-2xl font-bold">Resultados Globales (En línea)</h2>
@@ -55,9 +59,10 @@ export function OnlineResults({ tracks }: { tracks: any[] }) {
             <div 
               key={track.id}
               className={cn(
-                "group flex items-center px-4 py-2 rounded-md hover:bg-white/10 transition-colors cursor-pointer",
+                "group flex items-center px-4 py-2 rounded-md hover:bg-white/10 transition-all cursor-pointer animate-in fade-in slide-in-from-left-4 duration-300",
                 isCurrent && "bg-white/5"
               )}
+              style={{ animationDelay: `${index * 50}ms` }}
               onClick={() => {
                 if (isCurrent) togglePlayPause();
                 else playTrack(track);
@@ -71,7 +76,9 @@ export function OnlineResults({ tracks }: { tracks: any[] }) {
               </div>
 
               <div className="flex items-center flex-1 ml-4 min-w-0">
-                <img src={track.imageUrl} alt="" className="size-10 rounded shadow-lg mr-3 object-cover" />
+                <div className="relative size-10 rounded shadow-lg mr-3 overflow-hidden bg-white/10 flex-shrink-0">
+                   <img src={track.imageUrl} alt="" className="object-cover w-full h-full" />
+                </div>
                 <div className="min-w-0">
                   <div className={cn("font-medium truncate", isCurrent ? "text-green-500" : "text-white")}>
                     {track.name}
@@ -100,7 +107,7 @@ export function OnlineResults({ tracks }: { tracks: any[] }) {
                     handleSaveTrack(track);
                   }}
                 >
-                  <Plus className="size-4" />
+                   {savingId === track.id ? <Loader2 className="size-4 animate-spin text-[#1db954]" /> : <Plus className="size-4" />}
                 </Button>
               </div>
             </div>
