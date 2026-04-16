@@ -289,3 +289,61 @@ export async function uploadSongAction(
     };
   }
 }
+export async function searchOnlineTracksAction(query: string) {
+  if (!query) return [];
+
+  try {
+    const response = await fetch(
+      `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&entity=song&limit=10`
+    );
+    const data = await response.json();
+
+    return data.results.map((item: any) => ({
+      id: `itunes-${item.trackId}`,
+      name: item.trackName,
+      artist: item.artistName,
+      album: item.collectionName,
+      duration: Math.round(item.trackTimeMillis / 1000),
+      imageUrl: item.artworkUrl100.replace('100x100', '600x600'),
+      audioUrl: item.previewUrl,
+      genre: item.primaryGenreName,
+      isLocal: false,
+    }));
+  } catch (error) {
+    console.error('Error fetching from iTunes:', error);
+    return [];
+  }
+}
+
+export async function saveOnlineTrackAction(track: any) {
+  try {
+    const existing = await db
+      .select()
+      .from(songs)
+      .where(eq(songs.id, track.id))
+      .limit(1);
+
+    if (existing.length > 0) return { success: true, song: existing[0] };
+
+    const [newSong] = await db
+      .insert(songs)
+      .values({
+        id: track.id,
+        name: track.name,
+        artist: track.artist,
+        album: track.album,
+        duration: track.duration,
+        genre: track.genre,
+        imageUrl: track.imageUrl,
+        audioUrl: track.audioUrl,
+        isLocal: false,
+      })
+      .returning();
+
+    revalidatePath('/', 'layout');
+    return { success: true, song: newSong };
+  } catch (error) {
+    console.error('Error saving online track:', error);
+    return { success: false, error: 'Failed to save track' };
+  }
+}

@@ -4,6 +4,8 @@ import { Suspense } from 'react';
 import { Loader2, UserRound, Music } from 'lucide-react';
 import { SearchInput } from './search';
 import { getAllPlaylists } from '@/lib/db/queries';
+import { searchOnlineTracksAction } from './actions';
+import { OnlineResults } from './online-results';
 import Link from 'next/link';
 import { ScrollHeader } from './scroll-header';
 
@@ -17,6 +19,7 @@ export default async function Page({
   const liked = params.liked === 'true';
   const playlists = await getAllPlaylists();
   const topPlaylists = playlists.slice(0, 6);
+  const onlineTracks = query ? await searchOnlineTracksAction(query) : [];
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-[#121212] rounded-lg my-2 mr-2 relative">
@@ -50,11 +53,15 @@ export default async function Page({
           )}
 
           <section>
-            {(query || liked) && <h2 className="text-2xl font-bold mb-4">{liked ? "Tus me gusta" : "Resultados de búsqueda"}</h2>}
+            {(query || liked) && <h2 className="text-2xl font-bold mb-4">{liked ? "Tus me gusta" : "En tu biblioteca"}</h2>}
             <Suspense fallback={<div className="w-full h-full flex items-center justify-center p-20"><Loader2 className="animate-spin text-gray-500" /></div>}>
               <TrackTable query={query} liked={liked} />
             </Suspense>
           </section>
+
+          {query && onlineTracks.length > 0 && (
+            <OnlineResults tracks={onlineTracks} />
+          )}
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
