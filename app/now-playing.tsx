@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect, useActionState } from 'react';
-import { PencilIcon, Loader2, CheckIcon, ListMusic, Info, Trash2, Gaps, GripVertical } from 'lucide-react';
+import { PencilIcon, Loader2, CheckIcon, ListMusic, Info, Trash2, GripVertical, Play } from 'lucide-react';
 import { updateTrackAction, updateTrackImageAction } from './actions';
 import { usePlayback } from './playback-context';
-import { getValidImageUrl, cn, formatDuration } from '@/lib/utils';
+import { getValidImageUrl, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from './toast-provider';
-import Image from 'next/image';
+import { songs } from '@/lib/db/schema';
 
 type Tab = 'details' | 'queue';
 
@@ -118,10 +118,10 @@ export function NowPlaying() {
             <div className="space-y-1 animate-in fade-in slide-in-from-left-4 duration-300">
               <h4 className="text-[11px] uppercase tracking-widest text-[#a7a7a7] font-bold mb-3">En reproducción</h4>
               <div className="flex items-center gap-3 p-2 rounded-md bg-white/5 mb-6 group/active border border-white/5">
-                <div className="size-10 relative flex-shrink-0">
-                  <img src={getValidImageUrl(currentTrack.imageUrl)} className="object-cover rounded" />
+                <div className="size-10 relative flex-shrink-0 rounded overflow-hidden">
+                  <img src={getValidImageUrl(currentTrack.imageUrl)} className="object-cover w-full h-full" alt="" />
                   {isPlaying && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded">
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <div className="flex items-end gap-0.5 h-3">
                         <div className="w-0.5 bg-green-500 animate-now-playing-1" />
                         <div className="w-0.5 bg-green-500 animate-now-playing-2" />
@@ -152,12 +152,12 @@ export function NowPlaying() {
                       dragOverIndex === index && "border-t-green-500 bg-green-500/5"
                     )}
                   >
-                    <GripVertical className="size-3.5 text-[#a7a7a7] opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
-                    <div className="size-10 relative flex-shrink-0 bg-[#282828] rounded">
-                      <img src={getValidImageUrl(track.imageUrl)} className="object-cover w-full h-full rounded" />
+                    <GripVertical className="size-3.5 text-[#a7a7a7] opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing flex-shrink-0" />
+                    <div className="size-10 relative flex-shrink-0 bg-[#282828] rounded overflow-hidden">
+                      <img src={getValidImageUrl(track.imageUrl)} className="object-cover w-full h-full" alt="" />
                       <button 
                         onClick={() => playTrack(track)}
-                        className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                        className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                       >
                         <Play className="size-4 text-white fill-white" />
                       </button>
@@ -168,7 +168,7 @@ export function NowPlaying() {
                     </div>
                     <button 
                       onClick={(e) => { e.stopPropagation(); removeTrack(track.id); }}
-                      className="opacity-0 group-hover:opacity-100 size-8 flex items-center justify-center text-[#b3b3b3] hover:text-red-500 transition-all rounded-full hover:bg-white/5"
+                      className="opacity-0 group-hover:opacity-100 size-8 flex items-center justify-center text-[#b3b3b3] hover:text-red-500 transition-all rounded-full hover:bg-white/5 flex-shrink-0"
                     >
                       <Trash2 className="size-3.5" />
                     </button>
@@ -176,7 +176,7 @@ export function NowPlaying() {
                 );
               })}
               {playlist.length <= 1 && (
-                <p className="text-center py-10 text-xs text-[#a7a7a7] italic">La cola está vacía.</p>
+                <p className="text-center py-10 text-xs text-[#a7a7a7] italic">La cola está vacía. Busca canciones y añádelas con el botón +</p>
               )}
             </div>
           )}
@@ -185,9 +185,6 @@ export function NowPlaying() {
     </div>
   );
 }
-
-// EditableInput remains the same (helper for metadata)
-import { Play } from 'lucide-react';
 
 interface EditableInputProps {
   initialValue: string;
@@ -254,6 +251,7 @@ export function EditableInput({
               value={value}
               onChange={(e) => setValue(e.target.value)}
               onBlur={handleSubmit}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } if (e.key === 'Escape') { setIsEditing(false); setValue(initialValue); } }}
               className="bg-transparent w-full focus:outline-none text-sm text-white p-0"
             />
           </form>

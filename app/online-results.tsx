@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from './toast-provider';
 
 export function OnlineResults({ tracks }: { tracks: any[] }) {
-  const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayback();
+  const { playTrack, currentTrack, isPlaying, togglePlayPause, addToQueue } = usePlayback();
   const [savingId, setSavingId] = useState<string | null>(null);
   const { toast } = useToast();
 
