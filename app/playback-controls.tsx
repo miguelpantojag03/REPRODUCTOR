@@ -136,35 +136,65 @@ export function PlaybackButtons() {
 export function ProgressBar() {
   let { currentTime, duration, setCurrentTime } = usePlayback();
   let progressBarRef = useRef<HTMLDivElement>(null);
+  let [isDragging, setIsDragging] = useState(false);
+  let [dragTime, setDragTime] = useState(0);
 
   let formatTime = (time: number) => {
-    if (isNaN(time)) return '0:00';
+    if (isNaN(time) || time < 0) return '0:00';
     let minutes = Math.floor(time / 60);
     let seconds = Math.floor(time % 60);
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  let handleProgressChange = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (progressBarRef.current && duration > 0) {
-      let rect = progressBarRef.current.getBoundingClientRect();
-      let x = e.clientX - rect.left;
-      let percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      let newTime = (percentage / 100) * duration;
-      setCurrentTime(newTime);
-    }
+  let calcTimeFromEvent = (e: React.MouseEvent | MouseEvent) => {
+    if (!progressBarRef.current || duration <= 0) return 0;
+    let rect = progressBarRef.current.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let percentage = Math.max(0, Math.min(1, x / rect.width));
+    return percentage * duration;
   };
 
-  const currentPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
+  let handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+    let time = calcTimeFromEvent(e);
+    setDragTime(time);
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+    
+    let handleMouseMove = (e: MouseEvent) => {
+      let time = calcTimeFromEvent(e);
+      setDragTime(time);
+    };
+
+    let handleMouseUp = (e: MouseEvent) => {
+      let time = calcTimeFromEvent(e);
+      setCurrentTime(time);
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, duration, setCurrentTime]);
+
+  let displayTime = isDragging ? dragTime : currentTime;
+  let currentPercent = duration > 0 ? Math.min(100, (displayTime / duration) * 100) : 0;
 
   return (
     <div className="flex items-center w-full mt-1 max-w-[600px]">
       <span className="text-[11px] tabular-nums text-[#a7a7a7] min-w-[40px] text-right">
-        {formatTime(currentTime)}
+        {formatTime(displayTime)}
       </span>
       <div
         ref={progressBarRef}
         className="flex-grow mx-3 h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative group flex items-center"
-        onClick={handleProgressChange}
+        onMouseDown={handleMouseDown}
       >
         <div
           className="absolute top-0 left-0 h-full bg-white group-hover:bg-[#1db954] rounded-full transition-colors"
@@ -172,7 +202,7 @@ export function ProgressBar() {
         ></div>
         <div 
           className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover:opacity-100 shadow shadow-black transition-opacity"
-          style={{ left: `calc(${currentPercent}% - 6px)` }}
+          style={{ left: `calc(${currentPercent}% - 6px)`, top: '-4px' }}
         ></div>
       </div>
       <span className="text-[11px] tabular-nums text-[#a7a7a7] min-w-[40px] text-left">

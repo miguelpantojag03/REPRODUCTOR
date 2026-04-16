@@ -20,7 +20,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { UploadButton } from '@/components/upload-button';
 import { cn } from '@/lib/utils';
 
-let isProduction = process.env.NEXT_PUBLIC_VERCEL_ENV === 'production';
+let isProduction = false; // Allow all features everywhere
 
 function PlaylistRow({ playlist }: { playlist: Playlist }) {
   let pathname = usePathname();

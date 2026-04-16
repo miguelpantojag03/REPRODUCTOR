@@ -12,12 +12,10 @@ import fs from 'fs/promises';
 import { existsSync } from 'fs';
 
 export async function createPlaylistAction(id: string, name: string) {
-  if (process.env.VERCEL_ENV === 'production') return;
   await createPlaylist(id, name);
 }
 
 export async function uploadPlaylistCoverAction(_: any, formData: FormData) {
-  if (process.env.VERCEL_ENV === 'production') return;
   const playlistId = formData.get('playlistId') as string;
   const file = formData.get('file') as File;
   if (!file) throw new Error('No file provided');
@@ -36,13 +34,11 @@ export async function uploadPlaylistCoverAction(_: any, formData: FormData) {
 }
 
 export async function updatePlaylistNameAction(playlistId: string, name: string) {
-  if (process.env.VERCEL_ENV === 'production') return;
   await db.update(playlists).set({ name }).where(eq(playlists.id, playlistId));
   revalidatePath('/', 'layout');
 }
 
 export async function deletePlaylistAction(id: string) {
-  if (process.env.VERCEL_ENV === 'production') return;
   await db.transaction(async (tx) => {
     await tx.delete(playlistSongs).where(eq(playlistSongs.playlistId, id)).execute();
     await tx.delete(playlists).where(eq(playlists.id, id)).execute();
