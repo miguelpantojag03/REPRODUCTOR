@@ -230,7 +230,7 @@ export async function getYouTubeIdAction(trackName: string, artistName: string) 
 export async function saveOnlineTrackAction(track: any) {
   try {
     const existing = await db.select().from(songs).where(eq(songs.id, track.id)).limit(1);
-    if (existing.length > 0) return { success: true, song: existing[0] };
+    if (existing.length > 0) return { success: true, song: existing[0], songId: existing[0].id };
 
     const [newSong] = await db.insert(songs).values({
       id: track.id,
@@ -246,7 +246,7 @@ export async function saveOnlineTrackAction(track: any) {
     }).returning();
 
     revalidatePath('/', 'layout');
-    return { success: true, song: newSong };
+    return { success: true, song: newSong, songId: newSong.id };
   } catch (error) {
     return { success: false, error: 'Failed' };
   }

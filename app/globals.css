@@ -73,3 +73,52 @@
 tr:focus {
   outline: none;
 }
+
+/* Now-playing equalizer bar animations */
+@keyframes now-playing-1 {
+  0%, 100% { height: 3px; }
+  50% { height: 12px; }
+}
+@keyframes now-playing-2 {
+  0%, 100% { height: 8px; }
+  50% { height: 4px; }
+}
+@keyframes now-playing-3 {
+  0%, 100% { height: 5px; }
+  50% { height: 12px; }
+}
+
+.animate-now-playing-1 {
+  animation: now-playing-1 0.8s ease-in-out infinite;
+}
+.animate-now-playing-2 {
+  animation: now-playing-2 0.6s ease-in-out infinite 0.2s;
+}
+.animate-now-playing-3 {
+  animation: now-playing-3 0.7s ease-in-out infinite 0.4s;
+}
+
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* Smooth transition for drag-and-drop */
+[draggable="true"] {
+  cursor: grab;
+}
+[draggable="true"]:active {
+  cursor: grabbing;
+  opacity: 0.7;
+}

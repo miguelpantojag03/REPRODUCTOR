@@ -5,7 +5,7 @@ import { Song, PlaylistWithSongs } from '@/lib/db/types';
 import { formatDuration, highlightText, getValidImageUrl, cn } from '@/lib/utils';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Play, Pause, Plus, Loader2, Heart, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Play, Pause, Plus, Loader2, Heart, Trash2, ListMusic, ListPlus, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
 import axios from 'axios';
 import {
   DropdownMenu,
@@ -15,9 +15,12 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import Image from 'next/image';
-import { toggleFavoriteAction } from '@/app/actions';
+import { toggleFavoriteAction, addToPlaylistAction } from '@/app/actions';
+import { usePlaylist } from '@/app/hooks/use-playlist';
+import { useToast } from '@/app/toast-provider';
 
 function TrackRow({
   track,
@@ -51,8 +54,11 @@ function TrackRow({
     handleKeyNavigation,
     removeTrack,
     reorderTrack,
+    addToQueue,
     playlist,
   } = usePlayback();
+  const { playlists } = usePlaylist();
+  const { toast } = useToast();
   
   const [isLiked, setIsLiked] = useState(Boolean((track as any).favorite));
   const isCurrentTrack = currentTrack?.id === track.id;
@@ -162,20 +168,46 @@ function TrackRow({
                 <MoreHorizontal className="size-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52 bg-[#282828] border-white/5 text-white">
+            <DropdownMenuContent align="end" className="w-56 bg-[#282828] border-white/10 text-white shadow-2xl">
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); playTrack(track); }}>
                 <Play className="mr-2 size-4" /> Reproducir ahora
               </DropdownMenuItem>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Plus className="mr-2 size-4" /> Agregar a...
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="bg-[#282828] border-white/5">
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); reorderTrack(track.id, 0); }}>Mover al inicio</DropdownMenuItem>
-                  <DropdownMenuItem onClick={(e) => { e.stopPropagation(); reorderTrack(track.id, playlist.length - 1); }}>Mover al final</DropdownMenuItem>
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-              <DropdownMenuItem className="text-red-500 focus:text-red-500" onClick={(e) => { e.stopPropagation(); removeTrack(track.id); }}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); addToQueue(track); toast(`"${track.name}" añadida a la cola`, 'success'); }}>
+                <ListMusic className="mr-2 size-4" /> Añadir a la cola
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); reorderTrack(track.id, 0); }}>
+                <ArrowUpToLine className="mr-2 size-4" /> Mover al inicio
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); reorderTrack(track.id, playlist.length - 1); }}>
+                <ArrowDownToLine className="mr-2 size-4" /> Mover al final
+              </DropdownMenuItem>
+              {playlists.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      <ListPlus className="mr-2 size-4" /> Añadir a playlist
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="bg-[#282828] border-white/10">
+                      {playlists.map((pl) => (
+                        <DropdownMenuItem
+                          key={pl.id}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            const result = await addToPlaylistAction(pl.id, track.id);
+                            toast(result.message || (result.success ? 'Añadida' : 'Error'), result.success ? 'success' : 'error');
+                          }}
+                        >
+                          {pl.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </>
+              )}
+              <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem className="text-red-400 focus:text-red-400" onClick={(e) => { e.stopPropagation(); removeTrack(track.id); }}>
                 <Trash2 className="mr-2 size-4" /> Quitar de la lista
               </DropdownMenuItem>
             </DropdownMenuContent>
