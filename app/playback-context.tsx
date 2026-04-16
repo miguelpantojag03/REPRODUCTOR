@@ -122,8 +122,8 @@ function useKeyboardNavigation() {
 export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Song | null>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTimeInternal] = useState(0);
+  const [duration, setDurationInternal] = useState(0);
   const [volume, setVolumeInternal] = useState(70);
   const [playlist, setPlaylistInternal] = useState<Song[]>([]);
   const [isLoadingYouTube, setIsLoadingYouTube] = useState(false);
@@ -133,7 +133,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
   // Load YouTube IFrame API
   useEffect(() => {
-    if (window.YT) return; // Prevent double load
+    if (window.YT) return;
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
     const firstScriptTag = document.getElementsByTagName('script')[0];
@@ -152,11 +152,13 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         },
         events: {
           onStateChange: (event: any) => {
-            if (event.data === (window as any).YT.PlayerState.PLAYING) {
+            const state = event.data;
+            if (state === (window as any).YT.PlayerState.PLAYING) {
               setIsPlaying(true);
-            } else if (event.data === (window as any).YT.PlayerState.PAUSED) {
-              setIsPlaying(false);
-            } else if (event.data === (window as any).YT.PlayerState.ENDED) {
+            } else if (state === (window as any).YT.PlayerState.PAUSED || state === (window as any).YT.PlayerState.BUFFERING) {
+               // Stay in play state if buffering to avoid UI flicker
+               if (state === (window as any).YT.PlayerState.PAUSED) setIsPlaying(false);
+            } else if (state === (window as any).YT.PlayerState.ENDED) {
               playNextTrack();
             }
           },
@@ -174,9 +176,9 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     if (isPlaying && currentTrack?.id.startsWith('itunes-') && youtubePlayerRef.current?.getCurrentTime) {
       interval = setInterval(() => {
         const time = youtubePlayerRef.current.getCurrentTime();
-        if (typeof time === 'number') setCurrentTime(time);
+        if (typeof time === 'number') setCurrentTimeInternal(time);
         const dur = youtubePlayerRef.current.getDuration();
-        if (typeof dur === 'number' && dur > 0) setDuration(dur);
+        if (typeof dur === 'number' && dur > 0) setDurationInternal(dur);
       }, 500);
     }
     return () => clearInterval(interval);
@@ -234,37 +236,25 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
   const setVolume = useCallback((newVolume: number) => {
     setVolumeInternal(newVolume);
-    if (audioRef.current) {
-      audioRef.current.volume = newVolume / 100;
-    }
-    if (youtubePlayerRef.current?.setVolume) {
-      youtubePlayerRef.current.setVolume(newVolume);
-    }
+    if (audioRef.current) audioRef.current.volume = newVolume / 100;
+    if (youtubePlayerRef.current?.setVolume) youtubePlayerRef.current.setVolume(newVolume);
   }, []);
 
   const setCurrentTime = useCallback((time: number) => {
+    setCurrentTimeInternal(time);
     const isYouTube = currentTrack?.id.startsWith('itunes-');
     if (isYouTube && youtubePlayerRef.current?.seekTo) {
       youtubePlayerRef.current.seekTo(time, true);
     } else if (audioRef.current) {
       audioRef.current.currentTime = time;
     }
-    setCurrentTimeInternal(time);
   }, [currentTrack]);
-
-  const setCurrentTimeInternal = (time: number) => {
-    setCurrentTime(time);
-  };
-  
-  // Actually I need to define local state for currentTime in the provider
-  // but let's just use the outer one. Wait, I have two names.
 
   const playTrack = useCallback(
     async (track: Song) => {
       setCurrentTrack(track);
-      setCurrentTime(0);
+      setCurrentTimeInternal(0);
       
-      // Stop other sources
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -282,13 +272,10 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
           youtubePlayerRef.current?.loadVideoById(result.videoId);
           youtubePlayerRef.current?.playVideo();
           setIsPlaying(true);
-        } else {
-          // Fallback to iTunes preview
-          if (audioRef.current) {
-            audioRef.current.src = track.audioUrl || '';
-            audioRef.current.play();
-            setIsPlaying(true);
-          }
+        } else if (audioRef.current) {
+          audioRef.current.src = track.audioUrl || '';
+          audioRef.current.play();
+          setIsPlaying(true);
         }
       } else {
         setIsPlaying(true);
@@ -350,7 +337,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         playNextTrack,
         playPreviousTrack,
         setCurrentTime,
-        setDuration,
+        setDuration: setDurationInternal,
         setPlaylist,
         addTrack,
         removeTrack,
@@ -368,8 +355,11 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       <div id="youtube-player" style={{ display: 'none' }}></div>
       <audio
         ref={audioRef}
-        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
-        onDurationChange={(e) => setDuration(e.currentTarget.duration)}
+        onTimeUpdate={(e) => {
+           // ONLY update internal state from the audio element
+           setCurrentTimeInternal(e.currentTarget.currentTime);
+        }}
+        onDurationChange={(e) => setDurationInternal(e.currentTarget.duration)}
         onEnded={playNextTrack}
       />
     </PlaybackContext.Provider>
