@@ -103,7 +103,20 @@ export function OnlineResults({ tracks }: { tracks: any[] }) {
                     handleSaveTrack(track);
                   }}
                 >
-                   {savingId === track.id ? <Loader2 className="size-4 animate-spin text-[#1db954]" /> : <Plus className="size-4" />}
+                   {savingId === track.id ? <Loader2 className="size-4 animate-spin text-[#1db954]" /> : <Heart className="size-4" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-gray-400 hover:text-white hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToQueue(track);
+                    toast(`"${track.name}" añadida a la cola`, 'success');
+                  }}
+                  title="Añadir a la cola"
+                >
+                  <Plus className="size-4" />
                 </Button>
               </div>
             </div>

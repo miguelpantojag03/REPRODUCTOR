@@ -31,6 +31,7 @@ type PlaybackContextType = {
   setDuration: (duration: number) => void;
   setPlaylist: (songs: Song[]) => void;
   addTrack: (track: Song, position: 'start' | 'end' | number) => void;
+  addToQueue: (track: Song) => void;
   removeTrack: (trackId: string) => void;
   reorderTrack: (trackId: string, targetIndex: number) => void;
   playlist: Song[];
@@ -203,6 +204,11 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const addToQueue = useCallback((track: Song) => {
+    playlistDLL.current.addLast(track);
+    setPlaylistInternal(playlistDLL.current.toArray());
+  }, []);
+
   const removeTrack = useCallback((trackId: string) => {
     playlistDLL.current.remove((s) => s.id === trackId);
     setPlaylistInternal(playlistDLL.current.toArray());
@@ -340,6 +346,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         setDuration: setDurationInternal,
         setPlaylist,
         addTrack,
+        addToQueue,
         removeTrack,
         reorderTrack,
         playlist,

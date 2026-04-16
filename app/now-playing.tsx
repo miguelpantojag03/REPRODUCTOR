@@ -1,177 +1,193 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useActionState } from 'react';
-import { PencilIcon, Loader2, CheckIcon, MoreHorizontal } from 'lucide-react';
+import { useState, useRef, useEffect, useActionState } from 'react';
+import { PencilIcon, Loader2, CheckIcon, ListMusic, Info, Trash2, Gaps, GripVertical } from 'lucide-react';
 import { updateTrackAction, updateTrackImageAction } from './actions';
 import { usePlayback } from './playback-context';
-import { getValidImageUrl } from '@/lib/utils';
-import { songs } from '@/lib/db/schema';
-import { cn } from '@/lib/utils';
+import { getValidImageUrl, cn, formatDuration } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
 import { useToast } from './toast-provider';
+import Image from 'next/image';
+
+type Tab = 'details' | 'queue';
 
 export function NowPlaying() {
-  const { currentTrack, activePanel, setActivePanel } = usePlayback();
+  const { currentTrack, activePanel, setActivePanel, playlist, reorderTrack, removeTrack, playTrack, isPlaying } = usePlayback();
   const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<Tab>('details');
+  const [draggedTrackId, setDraggedTrackId] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
   const [imageState, imageFormAction, imagePending] = useActionState(
     updateTrackImageAction,
-    {
-      success: false,
-      imageUrl: '',
-    }
+    { success: false, imageUrl: '' }
   );
-  const [showPencil, setShowPencil] = useState(false);
 
   useEffect(() => {
-    if (imageState?.success) {
-      toast('Carátula actualizada', 'success');
-    }
+    if (imageState?.success) toast('Carátula actualizada', 'success');
   }, [imageState, toast]);
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (!imagePending) {
-      timer = setTimeout(() => {
-        setShowPencil(true);
-      }, 300);
-    } else {
-      setShowPencil(false);
+  if (!currentTrack) return null;
+
+  const currentImageUrl = imageState?.success ? imageState.imageUrl : currentTrack.imageUrl;
+
+  const handleDragStart = (e: React.DragEvent, id: string) => {
+    setDraggedTrackId(id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedTrackId !== null) {
+      reorderTrack(draggedTrackId, targetIndex);
     }
-    return () => clearTimeout(timer);
-  }, [imagePending]);
-
-  if (!currentTrack) {
-    return null;
-  }
-
-  const currentImageUrl = imageState?.success
-    ? imageState.imageUrl
-    : currentTrack.imageUrl;
+    setDragOverIndex(null);
+    setDraggedTrackId(null);
+  };
 
   return (
     <div
       className={cn(
-        'hidden lg:flex flex-col w-[320px] bg-[#121212] p-4 my-2 mr-2 rounded-lg transition-all duration-300 border-l border-transparent shadow-lg relative overflow-hidden group/panel',
-        activePanel === 'now-playing'
-          ? 'bg-[#1a1a1a] ring-1 ring-white/10'
-          : 'opacity-100'
+        'hidden lg:flex flex-col w-[320px] bg-[#121212] my-2 mr-2 rounded-lg transition-all duration-300 shadow-xl relative overflow-hidden group/panel',
+        activePanel === 'now-playing' ? 'ring-1 ring-white/10 bg-[#181818]' : ''
       )}
       onClick={() => setActivePanel('now-playing')}
     >
-      {/* Adaptive Background Blur */}
+      {/* Background Decor */}
       <div 
-        className="absolute inset-x-0 top-0 h-64 opacity-20 blur-3xl pointer-events-none transition-all duration-1000"
-        style={{ 
-          backgroundImage: `url(${getValidImageUrl(currentImageUrl)})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
+        className="absolute inset-x-0 top-0 h-48 opacity-10 blur-2xl pointer-events-none"
+        style={{ backgroundImage: `url(${getValidImageUrl(currentImageUrl)})`, backgroundSize: 'cover' }}
       />
 
-      <div className="relative z-10 flex items-center justify-between mb-4 mt-2 px-2">
-        <h2 className="text-sm font-bold text-white hover:underline cursor-pointer truncate mr-2">
-          {currentTrack.album || currentTrack.name}
-        </h2>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-[#b3b3b3] hover:text-white rounded-full">
-          <MoreHorizontal className="w-5 h-5" />
+      {/* Tabs Header */}
+      <div className="flex items-center p-2 gap-1 border-b border-white/5 relative z-10 bg-[#121212]/80 backdrop-blur-md">
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn("flex-1 h-8 text-xs font-bold transition-all", activeTab === 'details' ? "bg-white/10 text-white" : "text-[#b3b3b3] hover:text-white")}
+          onClick={() => setActiveTab('details')}
+        >
+          <Info className="size-3.5 mr-2" /> Detalles
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn("flex-1 h-8 text-xs font-bold transition-all", activeTab === 'queue' ? "bg-white/10 text-white" : "text-[#b3b3b3] hover:text-white")}
+          onClick={() => setActiveTab('queue')}
+        >
+          <ListMusic className="size-3.5 mr-2" /> Cola ({playlist.length})
         </Button>
       </div>
 
-      <ScrollArea className="relative z-10 flex-1 -mx-4 px-4 overflow-hidden">
-        <div className="space-y-6 pb-20">
-          <div className="relative aspect-square w-full rounded-md overflow-hidden bg-[#282828] shadow-[0_8px_24px_rgba(0,0,0,0.5)] group">
-            <img
-              src={getValidImageUrl(currentImageUrl)}
-              alt="Album cover"
-              className="object-cover w-full h-full transition-transform duration-500 group-hover:scale-105"
-            />
-            <form action={imageFormAction} className="absolute inset-0">
-              <input type="hidden" name="trackId" value={currentTrack.id} />
-              <label
-                htmlFor="imageUpload"
-                className="absolute inset-0 cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 transition-opacity"
-              >
-                <input
-                  id="imageUpload"
-                  type="file"
-                  name="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      if (file.size <= 5 * 1024 * 1024) {
-                        e.target.form?.requestSubmit();
-                      } else {
-                        toast('El archivo supera el límite de 5MB', 'error');
-                        e.target.value = '';
-                      }
-                    }
-                  }}
+      <ScrollArea className="flex-1 relative z-10">
+        <div className="p-4">
+          {activeTab === 'details' ? (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-[#282828] shadow-2xl group">
+                <img
+                  src={getValidImageUrl(currentImageUrl)}
+                  alt="Cover"
+                  className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
                 />
-                <div
-                  className={cn(
-                    'rounded-full p-2',
-                    imagePending && 'bg-opacity-50'
-                  )}
-                >
-                  {imagePending ? (
-                    <Loader2 className="w-6 h-6 text-white animate-spin" />
-                  ) : (
-                    showPencil && (
-                      <PencilIcon className="w-6 h-6 text-white" />
-                    )
+                <form action={imageFormAction} className="absolute inset-0">
+                  <input type="hidden" name="trackId" value={currentTrack.id} />
+                  <label htmlFor="sideImageUpload" className="absolute inset-0 cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 bg-black/40 transition-opacity">
+                    <input id="sideImageUpload" type="file" name="file" className="hidden" accept="image/*" onChange={(e) => e.target.form?.requestSubmit()} />
+                    {imagePending ? <Loader2 className="size-8 text-white animate-spin" /> : <PencilIcon className="size-8 text-white" />}
+                  </label>
+                </form>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-xl font-bold text-white truncate">{currentTrack.name}</h3>
+                <p className="text-sm text-[#b3b3b3] hover:text-white transition-colors cursor-pointer">{currentTrack.artist}</p>
+              </div>
+              <div className="space-y-4 pt-2">
+                 <EditableInput initialValue={currentTrack.genre || ''} trackId={currentTrack.id} field="genre" label="Género" />
+                 <EditableInput initialValue={currentTrack.album || ''} trackId={currentTrack.id} field="album" label="Álbum" />
+                 <EditableInput initialValue={currentTrack.bpm?.toString() || ''} trackId={currentTrack.id} field="bpm" label="BPM" />
+                 <EditableInput initialValue={currentTrack.key || ''} trackId={currentTrack.id} field="key" label="Tonalidad" />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1 animate-in fade-in slide-in-from-left-4 duration-300">
+              <h4 className="text-[11px] uppercase tracking-widest text-[#a7a7a7] font-bold mb-3">En reproducción</h4>
+              <div className="flex items-center gap-3 p-2 rounded-md bg-white/5 mb-6 group/active border border-white/5">
+                <div className="size-10 relative flex-shrink-0">
+                  <img src={getValidImageUrl(currentTrack.imageUrl)} className="object-cover rounded" />
+                  {isPlaying && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center rounded">
+                      <div className="flex items-end gap-0.5 h-3">
+                        <div className="w-0.5 bg-green-500 animate-now-playing-1" />
+                        <div className="w-0.5 bg-green-500 animate-now-playing-2" />
+                        <div className="w-0.5 bg-green-500 animate-now-playing-3" />
+                      </div>
+                    </div>
                   )}
                 </div>
-              </label>
-            </form>
-          </div>
-          <div className="w-full space-y-1">
-            <EditableInput
-              initialValue={currentTrack.name}
-              trackId={currentTrack.id}
-              field="name"
-              label="Title"
-            />
-            <EditableInput
-              initialValue={currentTrack.artist}
-              trackId={currentTrack.id}
-              field="artist"
-              label="Artist"
-            />
-            <EditableInput
-              initialValue={currentTrack.genre || ''}
-              trackId={currentTrack.id}
-              field="genre"
-              label="Genre"
-            />
-            <EditableInput
-              initialValue={currentTrack.album || ''}
-              trackId={currentTrack.id}
-              field="album"
-              label="Album"
-            />
-            <EditableInput
-              initialValue={currentTrack.bpm?.toString() || ''}
-              trackId={currentTrack.id}
-              field="bpm"
-              label="BPM"
-            />
-            <EditableInput
-              initialValue={currentTrack.key || ''}
-              trackId={currentTrack.id}
-              field="key"
-              label="Key"
-            />
-          </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-bold text-green-500 truncate">{currentTrack.name}</div>
+                  <div className="text-xs text-[#b3b3b3] truncate">{currentTrack.artist}</div>
+                </div>
+              </div>
+
+              <h4 className="text-[11px] uppercase tracking-widest text-[#a7a7a7] font-bold mb-3 mt-6">Siguientes</h4>
+              {playlist.map((track, index) => {
+                if (track.id === currentTrack.id) return null;
+                return (
+                  <div
+                    key={`${track.id}-${index}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, track.id)}
+                    onDragOver={(e) => handleDragOver(e, index)}
+                    onDragLeave={() => setDragOverIndex(null)}
+                    onDrop={(e) => handleDrop(e, index)}
+                    className={cn(
+                      "group flex items-center gap-3 p-2 rounded-md hover:bg-white/5 transition-all relative cursor-default border border-transparent",
+                      dragOverIndex === index && "border-t-green-500 bg-green-500/5"
+                    )}
+                  >
+                    <GripVertical className="size-3.5 text-[#a7a7a7] opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
+                    <div className="size-10 relative flex-shrink-0 bg-[#282828] rounded">
+                      <img src={getValidImageUrl(track.imageUrl)} className="object-cover w-full h-full rounded" />
+                      <button 
+                        onClick={() => playTrack(track)}
+                        className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                      >
+                        <Play className="size-4 text-white fill-white" />
+                      </button>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-white truncate">{track.name}</div>
+                      <div className="text-xs text-[#b3b3b3] truncate">{track.artist}</div>
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); removeTrack(track.id); }}
+                      className="opacity-0 group-hover:opacity-100 size-8 flex items-center justify-center text-[#b3b3b3] hover:text-red-500 transition-all rounded-full hover:bg-white/5"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {playlist.length <= 1 && (
+                <p className="text-center py-10 text-xs text-[#a7a7a7] italic">La cola está vacía.</p>
+              )}
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>
   );
 }
+
+// EditableInput remains the same (helper for metadata)
+import { Play } from 'lucide-react';
 
 interface EditableInputProps {
   initialValue: string;
@@ -197,9 +213,7 @@ export function EditableInput({
   });
 
   useEffect(() => {
-    if (isEditing) {
-      inputRef.current?.focus();
-    }
+    if (isEditing) inputRef.current?.focus();
   }, [isEditing]);
 
   useEffect(() => {
@@ -211,9 +225,7 @@ export function EditableInput({
   useEffect(() => {
     if (state.success) {
       setShowCheck(true);
-      const timer = setTimeout(() => {
-        setShowCheck(false);
-      }, 2000);
+      const timer = setTimeout(() => setShowCheck(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [state.success]);
@@ -223,86 +235,37 @@ export function EditableInput({
       setIsEditing(false);
       return;
     }
-
     formRef.current?.requestSubmit();
     setIsEditing(false);
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleSubmit();
-    } else if (e.key === 'Escape') {
-      setIsEditing(false);
-      setValue(initialValue);
-    }
-  }
-
   return (
-    <div className="space-y-1 group px-2">
-      <label
-        htmlFor={`${field}-input`}
-        className="text-[11px] uppercase tracking-wider text-[#a7a7a7] font-bold"
-      >
-        {label}
-      </label>
-      <div className="flex items-center justify-between w-full text-sm h-6 border-b border-transparent focus-within:border-[#1db954] transition-colors">
+    <div className="space-y-1 group">
+      <label className="text-[10px] uppercase tracking-widest text-[#a7a7a7] font-bold">{label}</label>
+      <div className="flex items-center justify-between h-7 border-b border-transparent focus-within:border-green-500 transition-all">
         {isEditing ? (
           <form ref={formRef} action={formAction} className="w-full">
             <input type="hidden" name="trackId" value={trackId} />
             <input type="hidden" name="field" value={field} />
             <input
               ref={inputRef}
-              id={`${field}-input`}
               type="text"
               name={field}
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              onKeyDown={handleKeyDown}
               onBlur={handleSubmit}
-              className={cn(
-                'bg-transparent w-full focus:outline-none p-0 text-white',
-                state.error && 'text-red-500'
-              )}
-              aria-invalid={state.error ? 'true' : 'false'}
-              aria-describedby={state.error ? `${field}-error` : undefined}
+              className="bg-transparent w-full focus:outline-none text-sm text-white p-0"
             />
           </form>
         ) : (
-          <div
-            className="w-full cursor-pointer truncate block"
-            onClick={() => setIsEditing(true)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                setIsEditing(true);
-              }
-            }}
-            aria-label={`Edit ${label}`}
-          >
-            <span className={cn(value ? 'text-white' : 'text-[#a7a7a7]')}>
-              {value || '-'}
-            </span>
+          <div className="w-full cursor-text truncate text-sm" onClick={() => setIsEditing(true)}>
+            <span className={cn(value ? 'text-white' : 'text-[#a7a7a7]/50')}>{value || 'Añadir...'}</span>
           </div>
         )}
-        <div className="flex items-center">
-          {pending ? (
-            <Loader2 className="size-3 animate-spin text-[#1db954]" />
-          ) : showCheck ? (
-            <CheckIcon className="size-3 text-[#1db954]" />
-          ) : (
-            !isEditing && (
-              <PencilIcon className="size-3 text-[#b3b3b3] opacity-0 group-hover:opacity-100 transition-opacity" />
-            )
-          )}
+        <div className="flex items-center gap-2">
+          {pending ? <Loader2 className="size-3 animate-spin text-green-500" /> : showCheck ? <CheckIcon className="size-3 text-green-500" /> : <PencilIcon className="size-3 text-[#b3b3b3] opacity-0 group-hover:opacity-100 transition-opacity" />}
         </div>
       </div>
-      {state.error && (
-        <p id={`${field}-error`} className="text-xs text-red-500">
-          {state.error}
-        </p>
-      )}
     </div>
   );
 }
