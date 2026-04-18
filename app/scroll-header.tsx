@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { SearchInput } from './search';
 import { UserRound } from 'lucide-react';
+import { KeyboardShortcuts } from './keyboard-shortcuts';
 import { cn } from '@/lib/utils';
 
 export function ScrollHeader({ query }: { query?: string }) {
@@ -11,28 +12,24 @@ export function ScrollHeader({ query }: { query?: string }) {
   useEffect(() => {
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLElement;
-      if (target.scrollTop > 50) {
-        setScrolled(true);
-      } else {
-        setScrolled(false);
-      }
+      setScrolled(target.scrollTop > 50);
     };
-
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
   }, []);
 
   return (
-    <header 
+    <header
       className={cn(
-        "absolute top-0 inset-x-0 z-20 h-16 flex items-center justify-between px-6 transition-all duration-300",
-        scrolled ? "bg-[#121212] border-b border-white/5 shadow-md" : "bg-transparent border-b border-transparent"
+        'absolute top-0 inset-x-0 z-20 h-16 flex items-center justify-between px-6 transition-all duration-300',
+        scrolled ? 'bg-[#121212] border-b border-white/5 shadow-md' : 'bg-transparent border-b border-transparent'
       )}
     >
       <div className="flex items-center gap-2">
         <SearchInput value={query} />
       </div>
       <div className="flex items-center gap-3">
+        <KeyboardShortcuts />
         <button className="hidden sm:block text-sm font-bold hover:scale-105 transition-transform text-black bg-white px-4 py-1.5 rounded-full">
           Explorar Premium
         </button>

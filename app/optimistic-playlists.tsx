@@ -52,10 +52,17 @@ function PlaylistRow({ playlist }: { playlist: Playlist }) {
         )}
         tabIndex={0}
       >
-        <div className="flex-shrink-0 size-12 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.5)]">
-          <Music className="w-5 h-5 text-indigo-300" />
+        <div className="flex-shrink-0 size-12 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded flex items-center justify-center shadow-[0_4px_12px_rgba(0,0,0,0.5)] overflow-hidden relative">
+          {playlist.coverUrl ? (
+            <img src={playlist.coverUrl} alt={playlist.name} className="w-full h-full object-cover" />
+          ) : (
+            <Music className="w-5 h-5 text-indigo-300" />
+          )}
         </div>
-        <span className="truncate">{playlist.name}</span>
+        <div className="min-w-0 flex-1">
+          <span className="truncate block text-sm">{playlist.name}</span>
+          <span className="text-xs text-gray-500">Lista de reproducción</span>
+        </div>
       </Link>
       <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
         <DropdownMenu>

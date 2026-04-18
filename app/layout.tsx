@@ -10,6 +10,8 @@ import { PlaylistProvider } from './hooks/use-playlist';
 import { MobileNav } from './mobile-nav';
 import { PlaybackControls } from './playback-controls';
 import { ToastProvider } from './toast-provider';
+import { MiniPlayer } from './mini-player';
+import { KeyboardShortcuts } from './keyboard-shortcuts';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -45,6 +47,7 @@ export default function RootLayout({
                 {children}
                 <NowPlaying />
                 <PlaybackControls />
+                <MiniPlayer />
                 <MobileNav />
               </PlaylistProvider>
             </Suspense>

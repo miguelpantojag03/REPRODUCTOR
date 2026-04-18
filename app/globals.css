@@ -122,3 +122,69 @@ tr:focus {
   cursor: grabbing;
   opacity: 0.7;
 }
+
+/* Pulse animation for loading states */
+@keyframes pulse-green {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.animate-pulse-green {
+  animation: pulse-green 1.5s ease-in-out infinite;
+}
+
+/* Slide up animation for mini player */
+@keyframes slide-up {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Waveform bars for visualizer */
+@keyframes wave-1 { 0%,100%{height:4px} 50%{height:16px} }
+@keyframes wave-2 { 0%,100%{height:8px} 50%{height:4px} }
+@keyframes wave-3 { 0%,100%{height:6px} 50%{height:20px} }
+@keyframes wave-4 { 0%,100%{height:12px} 50%{height:6px} }
+@keyframes wave-5 { 0%,100%{height:5px} 50%{height:14px} }
+
+.wave-bar-1 { animation: wave-1 0.8s ease-in-out infinite; }
+.wave-bar-2 { animation: wave-2 0.6s ease-in-out infinite 0.1s; }
+.wave-bar-3 { animation: wave-3 0.9s ease-in-out infinite 0.2s; }
+.wave-bar-4 { animation: wave-4 0.7s ease-in-out infinite 0.15s; }
+.wave-bar-5 { animation: wave-5 0.85s ease-in-out infinite 0.3s; }
+
+/* Glow effect for active track */
+.track-glow {
+  box-shadow: 0 0 20px rgba(29, 185, 84, 0.3);
+}
+
+/* Scrollbar hide utility */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #1db954, #1ed760);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glass morphism */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.shimmer {
+  background: linear-gradient(90deg, #282828 25%, #333 50%, #282828 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

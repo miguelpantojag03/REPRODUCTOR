@@ -429,14 +429,72 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (e.key === ' ') {
-        e.preventDefault();
-        togglePlayPause();
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          togglePlayPause();
+          break;
+        case 'ArrowRight':
+          if (e.altKey) { e.preventDefault(); playNextTrackRef.current?.(); }
+          break;
+        case 'ArrowLeft':
+          if (e.altKey) { e.preventDefault(); playPreviousTrack(); }
+          break;
+        case 'ArrowUp':
+          if (e.altKey) {
+            e.preventDefault();
+            setVolumeState((v) => {
+              const next = Math.min(100, v + 5);
+              if (audioRef.current) audioRef.current.volume = next / 100;
+              try { youtubePlayerRef.current?.setVolume?.(next); } catch {}
+              localStorage.setItem('player-volume', String(next));
+              return next;
+            });
+          }
+          break;
+        case 'ArrowDown':
+          if (e.altKey) {
+            e.preventDefault();
+            setVolumeState((v) => {
+              const next = Math.max(0, v - 5);
+              if (audioRef.current) audioRef.current.volume = next / 100;
+              try { youtubePlayerRef.current?.setVolume?.(next); } catch {}
+              localStorage.setItem('player-volume', String(next));
+              return next;
+            });
+          }
+          break;
+        case 's':
+        case 'S':
+          toggleShuffle();
+          break;
+        case 'r':
+        case 'R':
+          cycleRepeat();
+          break;
+        case 'm':
+        case 'M':
+          setVolumeState((v) => {
+            if (v > 0) {
+              if (audioRef.current) audioRef.current.volume = 0;
+              try { youtubePlayerRef.current?.setVolume?.(0); } catch {}
+              localStorage.setItem('player-volume', '0');
+              return 0;
+            } else {
+              const restored = 70;
+              if (audioRef.current) audioRef.current.volume = restored / 100;
+              try { youtubePlayerRef.current?.setVolume?.(restored); } catch {}
+              localStorage.setItem('player-volume', String(restored));
+              return restored;
+            }
+          });
+          break;
       }
     };
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [togglePlayPause]);
+  }, [togglePlayPause, toggleShuffle, cycleRepeat, playPreviousTrack]);
 
   // MediaSession API
   useEffect(() => {
