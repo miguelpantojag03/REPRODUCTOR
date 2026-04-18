@@ -47,6 +47,8 @@ type PlaybackContextType = {
   repeatMode: RepeatMode;
   cycleRepeat: () => void;
   shuffledPlaylist: Song[];
+  playbackSpeed: number;
+  setPlaybackSpeed: (speed: number) => void;
 };
 
 const PlaybackContext = createContext<PlaybackContextType | undefined>(undefined);
@@ -126,6 +128,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [shuffledPlaylist, setShuffledPlaylist] = useState<Song[]>([]);
+  const [playbackSpeed, setPlaybackSpeedState] = useState(1);
 
   // Persist volume in localStorage
   const [volume, setVolumeState] = useState(() => {
@@ -293,6 +296,12 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     } catch { /* ignore */ }
   }, []);
 
+  const setPlaybackSpeed = useCallback((speed: number) => {
+    setPlaybackSpeedState(speed);
+    if (audioRef.current) audioRef.current.playbackRate = speed;
+    localStorage.setItem('player-speed', String(speed));
+  }, []);
+
   const seekTo = useCallback((time: number) => {
     setCurrentTimeState(time);
     const isYT = currentTrack?.id.startsWith('itunes-');
@@ -355,6 +364,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         }
         audioRef.current.src = src;
         audioRef.current.volume = volume / 100;
+        audioRef.current.playbackRate = playbackSpeed;
         try {
           await audioRef.current.play();
         } catch { /* autoplay blocked */ }
@@ -362,7 +372,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
       }
     }
     setActivePanel('tracklist');
-  }, [setActivePanel, volume]);
+  }, [setActivePanel, volume, playbackSpeed]);
 
   const playNextTrack = useCallback(() => {
     const track = currentTrackRef.current;
@@ -559,6 +569,8 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         repeatMode,
         cycleRepeat,
         shuffledPlaylist,
+        playbackSpeed,
+        setPlaybackSpeed,
       }}
     >
       {children}

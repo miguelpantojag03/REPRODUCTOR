@@ -1,60 +1,67 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import {
-  Heart,
-  Pause,
-  Play,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  VolumeX,
-  Shuffle,
-  Repeat,
-  Repeat1,
-  Loader2,
+  Heart, Pause, Play, SkipBack, SkipForward,
+  Volume2, VolumeX, Volume1, Shuffle, Repeat, Repeat1,
+  Loader2, Maximize2, ListMusic, Gauge,
 } from 'lucide-react';
 import { usePlayback } from '@/app/playback-context';
 import { getValidImageUrl, cn } from '@/lib/utils';
 import { toggleFavoriteAction } from './actions';
+import Link from 'next/link';
 
-export function TrackInfo() {
-  let { currentTrack } = usePlayback();
+function formatTime(t: number) {
+  if (isNaN(t) || t < 0) return '0:00';
+  return `${Math.floor(t / 60)}:${Math.floor(t % 60).toString().padStart(2, '0')}`;
+}
+
+export function TrackInfo({ onExpand }: { onExpand?: () => void }) {
+  const { currentTrack, setActivePanel } = usePlayback();
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
-    if (currentTrack) {
-      setIsLiked(Boolean((currentTrack as any).favorite));
-    }
+    if (currentTrack) setIsLiked(Boolean((currentTrack as any).favorite));
   }, [currentTrack]);
 
   const toggleFavorite = async () => {
     if (!currentTrack) return;
-    const nextState = !isLiked;
-    setIsLiked(nextState); // Optimistic UI
-    const result = await toggleFavoriteAction(currentTrack.id, nextState);
-    if (!result.success) {
-      setIsLiked(!nextState); // Rollback
-    }
+    const next = !isLiked;
+    setIsLiked(next);
+    const result = await toggleFavoriteAction(currentTrack.id, next);
+    if (!result.success) setIsLiked(!next);
   };
 
   return (
-    <div className="flex items-center space-x-3 w-1/3">
-      {currentTrack && (
+    <div className="flex items-center gap-3 w-[30%] min-w-0">
+      {currentTrack ? (
         <>
-          <img
-            src={getValidImageUrl(currentTrack.imageUrl)}
-            alt="Now playing"
-            className="w-10 h-10 object-cover rounded shadow-lg"
-          />
-          <div className="flex-shrink min-w-0">
-            <div className="text-sm font-medium truncate max-w-[120px] sm:max-w-[200px] text-gray-200">
+          <div
+            className="relative size-14 flex-shrink-0 rounded-md overflow-hidden shadow-lg cursor-pointer group"
+            onClick={() => setActivePanel('now-playing')}
+          >
+            <img
+              src={getValidImageUrl(currentTrack.imageUrl)}
+              alt="Now playing"
+              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+            />
+            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <Maximize2 className="size-4 text-white" />
+            </div>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold truncate text-white hover:underline cursor-pointer">
               {currentTrack.name}
             </div>
-            <div className="text-xs text-gray-400 truncate max-w-[120px] sm:max-w-[200px]">
+            <Link
+              href={`/artist/${encodeURIComponent(currentTrack.artist)}`}
+              className="text-xs text-[#b3b3b3] truncate hover:text-white cursor-pointer transition-colors hover:underline block"
+              onClick={e => e.stopPropagation()}
+            >
               {currentTrack.artist}
-            </div>
+            </Link>
           </div>
           <Button
             variant="ghost"
@@ -62,9 +69,17 @@ export function TrackInfo() {
             className="h-8 w-8 flex-shrink-0 hidden sm:flex hover:bg-transparent"
             onClick={toggleFavorite}
           >
-            <Heart className={cn("w-4 h-4 transition-colors", isLiked ? "text-green-500 fill-green-500" : "text-gray-400 hover:text-white")} />
+            <Heart className={cn('w-4 h-4 transition-all', isLiked ? 'text-[#1db954] fill-[#1db954] scale-110' : 'text-[#b3b3b3] hover:text-white')} />
           </Button>
         </>
+      ) : (
+        <div className="flex items-center gap-3 opacity-30">
+          <div className="size-14 rounded-md bg-white/10 flex-shrink-0" />
+          <div className="space-y-1.5">
+            <div className="h-3 w-28 bg-white/10 rounded" />
+            <div className="h-2.5 w-20 bg-white/10 rounded" />
+          </div>
+        </div>
       )}
     </div>
   );
@@ -72,234 +87,212 @@ export function TrackInfo() {
 
 export function PlaybackButtons() {
   const {
-    isPlaying,
-    togglePlayPause,
-    playNextTrack,
-    playPreviousTrack,
-    currentTrack,
-    isLoadingYouTube,
-    isShuffle,
-    toggleShuffle,
-    repeatMode,
-    cycleRepeat,
+    isPlaying, togglePlayPause, playNextTrack, playPreviousTrack,
+    currentTrack, isLoadingYouTube, isShuffle, toggleShuffle,
+    repeatMode, cycleRepeat, playbackSpeed, setPlaybackSpeed,
   } = usePlayback();
 
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
+  const [showSpeed, setShowSpeed] = useState(false);
+
   return (
-    <div className="flex items-center space-x-4 mb-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn("h-8 w-8 relative", isShuffle ? "text-[#1db954]" : "text-[#b3b3b3] hover:text-white")}
-        onClick={toggleShuffle}
-        disabled={!currentTrack}
-        title="Aleatorio"
-      >
-        <Shuffle className="w-4 h-4" />
-        {isShuffle && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1db954]" />}
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-[#b3b3b3] hover:text-white"
-        onClick={playPreviousTrack}
-        disabled={!currentTrack}
-      >
-        <SkipBack className="w-5 h-5 fill-current" />
-      </Button>
-      <Button
-        size="icon"
-        className="h-8 w-8 bg-white text-black hover:scale-105 transition-transform rounded-full flex items-center justify-center p-0"
-        onClick={togglePlayPause}
-        disabled={!currentTrack || isLoadingYouTube}
-      >
-        {isLoadingYouTube ? (
-          <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
-        ) : isPlaying ? (
-          <Pause className="w-5 h-5 fill-current" />
-        ) : (
-          <Play className="w-5 h-5 fill-current ml-0.5" />
-        )}
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-[#b3b3b3] hover:text-white"
-        onClick={playNextTrack}
-        disabled={!currentTrack}
-      >
-        <SkipForward className="w-5 h-5 fill-current" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn("h-8 w-8 relative", repeatMode !== 'off' ? "text-[#1db954]" : "text-[#b3b3b3] hover:text-white")}
-        onClick={cycleRepeat}
-        disabled={!currentTrack}
-        title={repeatMode === 'off' ? 'Repetir' : repeatMode === 'all' ? 'Repetir todo' : 'Repetir una'}
-      >
-        {repeatMode === 'one' ? (
-          <Repeat1 className="w-4 h-4" />
-        ) : (
-          <Repeat className="w-4 h-4" />
-        )}
-        {repeatMode !== 'off' && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1db954]" />}
-      </Button>
+    <div className="flex flex-col items-center gap-1 flex-1 max-w-[45%]">
+      <div className="flex items-center gap-3">
+        {/* Shuffle */}
+        <button
+          onClick={toggleShuffle}
+          disabled={!currentTrack}
+          className={cn(
+            'relative p-1.5 rounded-full transition-all hover:scale-110 disabled:opacity-30',
+            isShuffle ? 'text-[#1db954]' : 'text-[#b3b3b3] hover:text-white'
+          )}
+          title="Aleatorio (S)"
+        >
+          <Shuffle className="size-4" />
+          {isShuffle && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1db954]" />}
+        </button>
+
+        {/* Previous */}
+        <button
+          onClick={playPreviousTrack}
+          disabled={!currentTrack}
+          className="text-[#b3b3b3] hover:text-white transition-all hover:scale-110 disabled:opacity-30 p-1"
+        >
+          <SkipBack className="size-5 fill-current" />
+        </button>
+
+        {/* Play/Pause */}
+        <button
+          onClick={togglePlayPause}
+          disabled={!currentTrack || isLoadingYouTube}
+          className="w-9 h-9 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform active:scale-95 disabled:opacity-50 shadow-lg"
+        >
+          {isLoadingYouTube ? (
+            <Loader2 className="size-4 animate-spin text-gray-500" />
+          ) : isPlaying ? (
+            <Pause className="size-4 fill-black" />
+          ) : (
+            <Play className="size-4 fill-black ml-0.5" />
+          )}
+        </button>
+
+        {/* Next */}
+        <button
+          onClick={playNextTrack}
+          disabled={!currentTrack}
+          className="text-[#b3b3b3] hover:text-white transition-all hover:scale-110 disabled:opacity-30 p-1"
+        >
+          <SkipForward className="size-5 fill-current" />
+        </button>
+
+        {/* Repeat */}
+        <button
+          onClick={cycleRepeat}
+          disabled={!currentTrack}
+          className={cn(
+            'relative p-1.5 rounded-full transition-all hover:scale-110 disabled:opacity-30',
+            repeatMode !== 'off' ? 'text-[#1db954]' : 'text-[#b3b3b3] hover:text-white'
+          )}
+          title={repeatMode === 'off' ? 'Repetir (R)' : repeatMode === 'all' ? 'Repetir todo' : 'Repetir una'}
+        >
+          {repeatMode === 'one' ? <Repeat1 className="size-4" /> : <Repeat className="size-4" />}
+          {repeatMode !== 'off' && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1db954]" />}
+        </button>
+      </div>
+
+      {/* Progress bar */}
+      <ProgressBar />
     </div>
   );
 }
 
 export function ProgressBar() {
-  let { currentTime, duration, setCurrentTime } = usePlayback();
-  let progressBarRef = useRef<HTMLDivElement>(null);
-  let [isDragging, setIsDragging] = useState(false);
-  let [dragTime, setDragTime] = useState(0);
+  const { currentTime, duration, setCurrentTime } = usePlayback();
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragVal, setDragVal] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
 
-  let formatTime = (time: number) => {
-    if (isNaN(time) || time < 0) return '0:00';
-    let minutes = Math.floor(time / 60);
-    let seconds = Math.floor(time % 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  let calcTimeFromEvent = (e: React.MouseEvent | MouseEvent) => {
-    if (!progressBarRef.current || duration <= 0) return 0;
-    let rect = progressBarRef.current.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    let percentage = Math.max(0, Math.min(1, x / rect.width));
-    return percentage * duration;
-  };
-
-  let handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-    let time = calcTimeFromEvent(e);
-    setDragTime(time);
-  };
+  const calcTime = useCallback((e: MouseEvent | React.MouseEvent) => {
+    if (!barRef.current || duration <= 0) return 0;
+    const rect = barRef.current.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * duration;
+  }, [duration]);
 
   useEffect(() => {
     if (!isDragging) return;
-    
-    let handleMouseMove = (e: MouseEvent) => {
-      let time = calcTimeFromEvent(e);
-      setDragTime(time);
-    };
+    const onMove = (e: MouseEvent) => setDragVal(calcTime(e));
+    const onUp = (e: MouseEvent) => { setCurrentTime(calcTime(e)); setIsDragging(false); };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [isDragging, calcTime, setCurrentTime]);
 
-    let handleMouseUp = (e: MouseEvent) => {
-      let time = calcTimeFromEvent(e);
-      setCurrentTime(time);
-      setIsDragging(false);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging, duration, setCurrentTime]);
-
-  let displayTime = isDragging ? dragTime : currentTime;
-  let currentPercent = duration > 0 ? Math.min(100, (displayTime / duration) * 100) : 0;
+  const display = isDragging ? dragVal : currentTime;
+  const pct = duration > 0 ? Math.min(100, (display / duration) * 100) : 0;
 
   return (
-    <div className="flex items-center w-full mt-1 max-w-[600px]">
-      <span className="text-[11px] tabular-nums text-[#a7a7a7] min-w-[40px] text-right">
-        {formatTime(displayTime)}
-      </span>
+    <div className="flex items-center gap-2 w-full max-w-[600px]">
+      <span className="text-[11px] tabular-nums text-[#a7a7a7] w-10 text-right shrink-0">{formatTime(display)}</span>
       <div
-        ref={progressBarRef}
-        className="flex-grow mx-3 h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative group flex items-center"
-        onMouseDown={handleMouseDown}
+        ref={barRef}
+        className="flex-1 h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative group flex items-center"
+        onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); setDragVal(calcTime(e)); }}
       >
-        <div
-          className="absolute top-0 left-0 h-full bg-white group-hover:bg-[#1db954] rounded-full transition-colors"
-          style={{ width: `${currentPercent}%` }}
-        ></div>
-        <div 
-          className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover:opacity-100 shadow shadow-black transition-opacity"
-          style={{ left: `calc(${currentPercent}% - 6px)`, top: '-4px' }}
-        ></div>
+        <div className="absolute inset-y-0 left-0 bg-white group-hover:bg-[#1db954] rounded-full transition-colors" style={{ width: `${pct}%` }} />
+        <div className="absolute w-3 h-3 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity -translate-y-0" style={{ left: `calc(${pct}% - 6px)`, top: '-4px' }} />
       </div>
-      <span className="text-[11px] tabular-nums text-[#a7a7a7] min-w-[40px] text-left">
-        {formatTime(duration)}
-      </span>
+      <span className="text-[11px] tabular-nums text-[#a7a7a7] w-10 shrink-0">{formatTime(duration)}</span>
     </div>
   );
 }
 
-export function Volume() {
-  let { currentTrack, volume, setVolume } = usePlayback();
-  let [isMuted, setIsMuted] = useState(false);
-  let [prevVolume, setPrevVolume] = useState(70);
-  let volumeBarRef = useRef<HTMLDivElement>(null);
+export function RightControls() {
+  const { currentTrack, volume, setVolume, setActivePanel, playbackSpeed, setPlaybackSpeed } = usePlayback();
+  const [isMuted, setIsMuted] = useState(false);
+  const [prevVol, setPrevVol] = useState(70);
+  const [showSpeed, setShowSpeed] = useState(false);
+  const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-  let handleVolumeChange = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (volumeBarRef.current) {
-      let rect = volumeBarRef.current.getBoundingClientRect();
-      let x = e.clientX - rect.left;
-      let percentage = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      setVolume(percentage);
-      if (percentage > 0) setIsMuted(false);
-    }
+  const toggleMute = () => {
+    if (isMuted) { setVolume(prevVol); setIsMuted(false); }
+    else { setPrevVol(volume); setVolume(0); setIsMuted(true); }
   };
 
-  let toggleMute = () => {
-    if (isMuted) {
-      setVolume(prevVolume);
-      setIsMuted(false);
-    } else {
-      setPrevVolume(volume);
-      setVolume(0);
-      setIsMuted(true);
-    }
-  };
+  const VolumeIcon = isMuted || volume === 0 ? VolumeX : volume < 50 ? Volume1 : Volume2;
 
   return (
-    <div className="flex items-center group/vol w-32 md:w-40 lg:w-48">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-[#b3b3b3] hover:text-white flex-shrink-0"
-        onClick={toggleMute}
-        disabled={!currentTrack}
+    <div className="flex items-center justify-end gap-2 w-[30%]">
+      {/* Queue button */}
+      <button
+        onClick={() => setActivePanel('now-playing')}
+        className="hidden md:flex p-1.5 text-[#b3b3b3] hover:text-white transition-colors rounded"
+        title="Cola de reproducción"
       >
-        {isMuted || volume === 0 ? (
-          <VolumeX className="w-4 h-4" />
-        ) : (
-          <Volume2 className="w-4 h-4" />
+        <ListMusic className="size-4" />
+      </button>
+
+      {/* Speed control */}
+      <div className="relative hidden lg:block">
+        <button
+          onClick={() => setShowSpeed(p => !p)}
+          className={cn(
+            'px-2 py-0.5 rounded text-xs font-bold transition-colors',
+            playbackSpeed !== 1 ? 'text-[#1db954]' : 'text-[#b3b3b3] hover:text-white'
+          )}
+          title="Velocidad de reproducción"
+        >
+          {playbackSpeed}x
+        </button>
+        {showSpeed && (
+          <div className="absolute bottom-8 right-0 bg-[#282828] border border-white/10 rounded-lg shadow-2xl p-2 z-50 min-w-[80px]">
+            {speeds.map(s => (
+              <button
+                key={s}
+                onClick={() => { setPlaybackSpeed(s); setShowSpeed(false); }}
+                className={cn(
+                  'w-full text-left px-3 py-1.5 text-xs rounded hover:bg-white/10 transition-colors',
+                  playbackSpeed === s ? 'text-[#1db954] font-bold' : 'text-white'
+                )}
+              >
+                {s}x {s === 1 && '(normal)'}
+              </button>
+            ))}
+          </div>
         )}
-      </Button>
-      
-      <div
-        ref={volumeBarRef}
-        className="flex-grow h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative flex items-center group"
-        onClick={handleVolumeChange}
-      >
-        <div
-          className="absolute top-0 left-0 h-full bg-white group-hover:bg-[#1db954] rounded-full transition-colors"
-          style={{ width: `${volume}%` }}
-        ></div>
-        <div 
-          className="absolute h-3 w-3 bg-white rounded-full opacity-0 group-hover:opacity-100 shadow shadow-black transition-opacity"
-          style={{ left: `calc(${volume}% - 6px)` }}
-        ></div>
+      </div>
+
+      {/* Volume */}
+      <div className="flex items-center gap-1.5 group/vol w-28 md:w-32">
+        <button
+          onClick={toggleMute}
+          disabled={!currentTrack}
+          className="text-[#b3b3b3] hover:text-white transition-colors disabled:opacity-30 flex-shrink-0"
+        >
+          <VolumeIcon className="size-4" />
+        </button>
+        <div className="flex-1">
+          <Slider
+            value={[isMuted ? 0 : volume]}
+            min={0}
+            max={100}
+            step={1}
+            onValueChange={([v]) => { setVolume(v); if (v > 0) setIsMuted(false); }}
+            disabled={!currentTrack}
+            className="cursor-pointer"
+          />
+        </div>
       </div>
     </div>
   );
 }
 
 export function PlaybackControls() {
-  const { currentTrack } = usePlayback();
-
   return (
-    <div className="fixed bottom-16 md:bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#000000] border-t border-white/5 shadow-2xl z-50">
-      <TrackInfo />
-      <div className="flex flex-col items-center flex-grow max-w-[40%] md:max-w-[45%] lg:max-w-xl">
+    <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black via-black/95 to-black/90 border-t border-white/5 backdrop-blur-md">
+      <div className="flex items-center justify-between px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] h-[72px]">
+        <TrackInfo />
         <PlaybackButtons />
-        <ProgressBar />
-      </div>
-      <div className="flex items-center justify-end space-x-2 w-1/3">
-        <Volume />
+        <RightControls />
       </div>
     </div>
   );

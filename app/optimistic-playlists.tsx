@@ -1,7 +1,7 @@
 'use client';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, MoreVertical, Trash, Home, Search, Library, Music } from 'lucide-react';
+import { Plus, MoreVertical, Trash, Home, Search, Library, Music, Clock } from 'lucide-react';
 import { useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -179,6 +179,16 @@ export function OptimisticPlaylists() {
             <Search className="size-6 stroke-2 group-hover:text-white transition-colors" />
             Buscar
           </button>
+          <Link
+            href="/history"
+            className={cn(
+              "flex items-center gap-4 px-3 py-1 rounded-md font-bold transition-colors text-[15px]",
+              pathname === '/history' ? "text-white" : "text-[#b3b3b3] hover:text-white"
+            )}
+          >
+            <Clock className={cn("size-6", pathname === '/history' ? "fill-white" : "stroke-2")} />
+            Historial
+          </Link>
         </nav>
       </div>
 

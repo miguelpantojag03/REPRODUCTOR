@@ -22,6 +22,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import Image from 'next/image';
+import Link from 'next/link';
 import { toggleFavoriteAction, addToPlaylistAction, deleteSongAction } from '@/app/actions';
 import { usePlaylist } from '@/app/hooks/use-playlist';
 import { useToast } from '@/app/toast-provider';
@@ -171,7 +172,13 @@ function TrackRow({
             <div className={cn('font-medium truncate max-w-[180px] md:max-w-[320px]', isCurrentTrack ? 'text-green-500' : 'text-white')}>
               {highlightText(track.name, query)}
             </div>
-            <div className="text-xs text-gray-400 truncate">{highlightText(track.artist, query)}</div>
+            <Link
+              href={`/artist/${encodeURIComponent(track.artist)}`}
+              className="text-xs text-gray-400 truncate hover:text-white hover:underline transition-colors block"
+              onClick={e => e.stopPropagation()}
+            >
+              {highlightText(track.artist, query)}
+            </Link>
           </div>
         </div>
       </td>

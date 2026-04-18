@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useActionState } from 'react';
-import { PencilIcon, Loader2, CheckIcon, ListMusic, Info, Trash2, GripVertical, Play, Timer, X } from 'lucide-react';
+import { PencilIcon, Loader2, CheckIcon, ListMusic, Info, Trash2, GripVertical, Play, Timer, X, Mic2, Sliders } from 'lucide-react';
 import { updateTrackAction, updateTrackImageAction } from './actions';
 import { usePlayback } from './playback-context';
 import { getValidImageUrl, cn } from '@/lib/utils';
@@ -9,8 +9,11 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from './toast-provider';
 import { songs } from '@/lib/db/schema';
+import { LyricsPanel } from './lyrics-panel';
+import { Equalizer } from './equalizer';
+import Link from 'next/link';
 
-type Tab = 'details' | 'queue';
+type Tab = 'details' | 'queue' | 'lyrics';
 
 // Sleep timer options in minutes (0 = off)
 const SLEEP_OPTIONS = [0, 15, 30, 45, 60, 90];
@@ -23,6 +26,7 @@ export function NowPlaying() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [sleepMinutes, setSleepMinutes] = useState(0);
   const [sleepRemaining, setSleepRemaining] = useState<number | null>(null);
+  const [showEQ, setShowEQ] = useState(false);
   const sleepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [imageState, imageFormAction, imagePending] = useActionState(
@@ -106,7 +110,15 @@ export function NowPlaying() {
           className={cn('flex-1 h-8 text-xs font-bold transition-all', activeTab === 'details' ? 'bg-white/10 text-white' : 'text-[#b3b3b3] hover:text-white')}
           onClick={() => setActiveTab('details')}
         >
-          <Info className="size-3.5 mr-2" /> Detalles
+          <Info className="size-3.5 mr-1.5" /> Info
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn('flex-1 h-8 text-xs font-bold transition-all', activeTab === 'lyrics' ? 'bg-white/10 text-white' : 'text-[#b3b3b3] hover:text-white')}
+          onClick={() => setActiveTab('lyrics')}
+        >
+          <Mic2 className="size-3.5 mr-1.5" /> Letra
         </Button>
         <Button
           variant="ghost"
@@ -114,13 +126,26 @@ export function NowPlaying() {
           className={cn('flex-1 h-8 text-xs font-bold transition-all', activeTab === 'queue' ? 'bg-white/10 text-white' : 'text-[#b3b3b3] hover:text-white')}
           onClick={() => setActiveTab('queue')}
         >
-          <ListMusic className="size-3.5 mr-2" /> Cola ({playlist.length})
+          <ListMusic className="size-3.5 mr-1.5" /> Cola
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-[#b3b3b3] hover:text-white flex-shrink-0"
+          onClick={() => setShowEQ(true)}
+          title="Ecualizador"
+        >
+          <Sliders className="size-3.5" />
         </Button>
       </div>
 
+      {showEQ && <Equalizer onClose={() => setShowEQ(false)} />}
+
       <ScrollArea className="flex-1 relative z-10">
         <div className="p-4">
-          {activeTab === 'details' ? (
+          {activeTab === 'lyrics' ? (
+            <LyricsPanel />
+          ) : activeTab === 'details' ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               {/* Cover art with upload */}
               <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-[#282828] shadow-2xl group">
