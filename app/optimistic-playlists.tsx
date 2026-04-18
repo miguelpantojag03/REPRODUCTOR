@@ -1,7 +1,7 @@
 'use client';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, MoreVertical, Trash, Home, Search, Library, Music, Clock, Heart, TrendingUp } from 'lucide-react';
+import { Plus, MoreVertical, Trash, Home, Search, Library, Music, Clock, Heart, TrendingUp, Settings } from 'lucide-react';
 import { useRef, useEffect, Suspense, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -181,6 +181,7 @@ export function OptimisticPlaylists() {
         <NavItem href="/" label="Inicio" icon={Home} active={pathname === '/' && !new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('liked')} />
         <NavItem href="/history" label="Historial" icon={Clock} active={pathname === '/history'} />
         <NavItem href="/?liked=true" label="Me gusta" icon={Heart} active={false} />
+        <NavItem href="/settings" label="Configuración" icon={Settings} active={pathname === '/settings'} />
       </div>
 
       {/* ── Library Panel ── */}

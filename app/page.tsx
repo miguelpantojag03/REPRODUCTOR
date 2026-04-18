@@ -1,8 +1,8 @@
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { TrackTable } from './p/[id]/track-table';
 import { Suspense } from 'react';
-import { Loader2, Music, Clock, TrendingUp, ChevronRight, Sparkles } from 'lucide-react';
-import { getAllPlaylists, getRecentlyPlayedSongs, getMostPlayedSongs } from '@/lib/db/queries';
+import { Loader2, Music, Clock, TrendingUp, ChevronRight, Sparkles, Plus } from 'lucide-react';
+import { getAllPlaylists, getRecentlyPlayedSongs, getMostPlayedSongs, getRecentlyAddedSongs } from '@/lib/db/queries';
 import { searchOnlineTracksAction, searchOnlineAlbumsAction } from './actions';
 import { OnlineResults } from './online-results';
 import { OnlineAlbums } from './online-albums';
@@ -30,12 +30,13 @@ export default async function Page({
   const query = params.q || '';
   const liked = params.liked === 'true';
 
-  const [playlists, onlineTracks, onlineAlbums, recentlyPlayed, mostPlayed] = await Promise.all([
+  const [playlists, onlineTracks, onlineAlbums, recentlyPlayed, mostPlayed, recentlyAdded] = await Promise.all([
     getAllPlaylists(),
     query ? searchOnlineTracksAction(query) : Promise.resolve([]),
     query ? searchOnlineAlbumsAction(query) : Promise.resolve([]),
     (!query && !liked) ? getRecentlyPlayedSongs(8) : Promise.resolve([]),
     (!query && !liked) ? getMostPlayedSongs(6) : Promise.resolve([]),
+    (!query && !liked) ? getRecentlyAddedSongs(6) : Promise.resolve([]),
   ]);
 
   const topPlaylists = playlists.slice(0, 8);
@@ -107,6 +108,19 @@ export default async function Page({
                   </div>
                   <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
                     {recentlyPlayed.map(song => <RecentSongCard key={song.id} song={song} />)}
+                  </div>
+                </section>
+              )}
+
+              {/* Recently added */}
+              {recentlyAdded.length > 0 && recentlyPlayed.length === 0 && (
+                <section>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Plus className="size-4 text-blue-400" />
+                    <h2 className="text-base font-bold text-white">Añadidos recientemente</h2>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+                    {recentlyAdded.map(song => <RecentSongCard key={song.id} song={song} />)}
                   </div>
                 </section>
               )}

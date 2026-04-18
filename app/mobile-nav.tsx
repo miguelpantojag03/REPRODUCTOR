@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Home, Search, Library, Clock } from 'lucide-react';
+import { Home, Search, Library, Clock, Settings } from 'lucide-react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Suspense } from 'react';
@@ -36,6 +36,12 @@ function MobileNavContent() {
       label: 'Historial',
       icon: Clock,
       active: pathname === '/history',
+    },
+    {
+      href: '/settings',
+      label: 'Ajustes',
+      icon: Settings,
+      active: pathname === '/settings',
     },
   ];
 

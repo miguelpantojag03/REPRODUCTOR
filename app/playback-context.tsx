@@ -129,7 +129,13 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [isShuffle, setIsShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   const [shuffledPlaylist, setShuffledPlaylist] = useState<Song[]>([]);
-  const [playbackSpeed, setPlaybackSpeedState] = useState(1);
+  const [playbackSpeed, setPlaybackSpeedState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('player-speed');
+      return saved ? Number(saved) : 1;
+    }
+    return 1;
+  });
 
   // Persist volume in localStorage
   const [volume, setVolumeState] = useState(() => {
@@ -411,8 +417,15 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     const repeat = repeatModeRef.current;
     const shuffle = isShuffleRef.current;
 
+    // Repeat one: just seek to beginning and keep playing
     if (repeat === 'one' && track) {
-      playTrack(track);
+      if (audioRef.current && !track.id.startsWith('itunes-')) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(() => {});
+        setCurrentTimeState(0);
+      } else {
+        playTrack(track);
+      }
       return;
     }
 
@@ -531,6 +544,16 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
               return restored;
             }
           });
+          break;
+        case 'f':
+        case 'F':
+          // Toggle favorite for current track
+          if (currentTrackRef.current) {
+            const track = currentTrackRef.current;
+            const newFav = !(track as any).favorite;
+            // Dispatch a custom event that TrackInfo can listen to
+            window.dispatchEvent(new CustomEvent('toggle-favorite', { detail: { trackId: track.id, favorite: newFav } }));
+          }
           break;
       }
     };

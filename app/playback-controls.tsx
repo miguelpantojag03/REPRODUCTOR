@@ -26,6 +26,26 @@ function TrackInfo() {
     setIsLiked(Boolean((currentTrack as any)?.favorite));
   }, [currentTrack?.id, (currentTrack as any)?.favorite]);
 
+  // Listen for F keyboard shortcut
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.trackId === currentTrack?.id) {
+        const next = detail.favorite;
+        setIsLiked(next);
+        updateTrackInPlaylist(detail.trackId, { favorite: next });
+        toggleFavoriteAction(detail.trackId, next).then(res => {
+          if (!res.success) {
+            setIsLiked(!next);
+            updateTrackInPlaylist(detail.trackId, { favorite: !next });
+          }
+        });
+      }
+    };
+    window.addEventListener('toggle-favorite', handler);
+    return () => window.removeEventListener('toggle-favorite', handler);
+  }, [currentTrack?.id, updateTrackInPlaylist]);
+
   const toggleFavorite = async () => {
     if (!currentTrack) return;
     const next = !isLiked;
@@ -100,11 +120,13 @@ function ProgressBar() {
   const [dragVal, setDragVal] = useState(0);
   const barRef = useRef<HTMLDivElement>(null);
 
-  const calcTime = useCallback((e: MouseEvent | React.MouseEvent) => {
+  const calcTimeFromX = useCallback((clientX: number) => {
     if (!barRef.current || duration <= 0) return 0;
     const r = barRef.current.getBoundingClientRect();
-    return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * duration;
+    return Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * duration;
   }, [duration]);
+
+  const calcTime = useCallback((e: MouseEvent | React.MouseEvent) => calcTimeFromX(e.clientX), [calcTimeFromX]);
 
   useEffect(() => {
     if (!isDragging) return;
@@ -125,6 +147,19 @@ function ProgressBar() {
         ref={barRef}
         className="flex-1 h-1 bg-white/10 rounded-full cursor-pointer relative group flex items-center"
         onMouseDown={e => { e.preventDefault(); setIsDragging(true); setDragVal(calcTime(e)); }}
+        onTouchStart={e => {
+          const touch = e.touches[0];
+          setDragVal(calcTimeFromX(touch.clientX));
+        }}
+        onTouchMove={e => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          setDragVal(calcTimeFromX(touch.clientX));
+        }}
+        onTouchEnd={e => {
+          const touch = e.changedTouches[0];
+          setCurrentTime(calcTimeFromX(touch.clientX));
+        }}
       >
         <div
           className="absolute inset-y-0 left-0 bg-[#b3b3b3] group-hover:bg-[#1db954] rounded-full transition-colors duration-150"

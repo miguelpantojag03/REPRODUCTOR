@@ -365,9 +365,20 @@ export function TrackTable({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-20 space-y-4">
-        <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-        <p className="text-gray-400 text-sm">Cargando biblioteca...</p>
+      <div className="px-2 sm:px-4 pb-8">
+        {/* Skeleton rows */}
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 py-2.5 px-2 border-b border-white/[0.04]" style={{ opacity: 1 - i * 0.1 }}>
+            <div className="w-8 h-4 bg-white/[0.06] rounded shimmer hidden sm:block" />
+            <div className="size-10 rounded bg-white/[0.06] flex-shrink-0 shimmer" />
+            <div className="flex-1 space-y-2 min-w-0">
+              <div className="h-3.5 bg-white/[0.06] rounded shimmer" style={{ width: `${60 + Math.random() * 30}%` }} />
+              <div className="h-2.5 bg-white/[0.04] rounded shimmer" style={{ width: `${30 + Math.random() * 20}%` }} />
+            </div>
+            <div className="hidden md:block h-3 w-24 bg-white/[0.04] rounded shimmer" />
+            <div className="h-3 w-10 bg-white/[0.04] rounded shimmer" />
+          </div>
+        ))}
       </div>
     );
   }
@@ -393,10 +404,10 @@ export function TrackTable({
     filteredSongs = filteredSongs.filter((s) => s.genre === genreFilter);
   }
 
-  // Sort
+  // Sort — handle null values properly
   filteredSongs = [...filteredSongs].sort((a, b) => {
-    let aVal: any = a[sortField as keyof Song] ?? '';
-    let bVal: any = b[sortField as keyof Song] ?? '';
+    let aVal: any = (a as any)[sortField] ?? (typeof (a as any)[sortField] === 'number' ? -1 : '');
+    let bVal: any = (b as any)[sortField] ?? (typeof (b as any)[sortField] === 'number' ? -1 : '');
     if (typeof aVal === 'string') aVal = aVal.toLowerCase();
     if (typeof bVal === 'string') bVal = bVal.toLowerCase();
     if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
