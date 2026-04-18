@@ -2,16 +2,20 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { usePlayback } from './playback-context';
-import { getValidImageUrl, formatDuration, cn } from '@/lib/utils';
-import { Play, Pause, SkipForward, SkipBack, X, ChevronDown, Heart, ListMusic, Shuffle, Repeat, Repeat1, Volume2, VolumeX } from 'lucide-react';
+import { getValidImageUrl, cn } from '@/lib/utils';
+import {
+  Play, Pause, SkipForward, SkipBack,
+  ChevronDown, Heart, ListMusic,
+  Shuffle, Repeat, Repeat1, Volume2, VolumeX,
+} from 'lucide-react';
 import { toggleFavoriteAction } from './actions';
+import Link from 'next/link';
 
 export function MiniPlayer() {
   const {
     currentTrack, isPlaying, togglePlayPause, playNextTrack, playPreviousTrack,
     currentTime, duration, setCurrentTime, volume, setVolume,
-    isShuffle, toggleShuffle, repeatMode, cycleRepeat, playlist,
-    isLoadingYouTube,
+    isShuffle, toggleShuffle, repeatMode, cycleRepeat,
   } = usePlayback();
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -22,7 +26,17 @@ export function MiniPlayer() {
 
   useEffect(() => {
     if (currentTrack) setIsLiked(Boolean((currentTrack as any).favorite));
-  }, [currentTrack]);
+  }, [currentTrack?.id]);
+
+  // Lock body scroll when expanded
+  useEffect(() => {
+    if (isExpanded) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isExpanded]);
 
   if (!currentTrack) return null;
 
@@ -31,8 +45,7 @@ export function MiniPlayer() {
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!progressRef.current || duration <= 0) return;
     const rect = progressRef.current.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    setCurrentTime(pct * duration);
+    setCurrentTime(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)) * duration);
   };
 
   const toggleMute = () => {
@@ -47,27 +60,40 @@ export function MiniPlayer() {
 
   return (
     <>
-      {/* Fullscreen expanded player — mobile only */}
+      {/* ── FULLSCREEN PLAYER (mobile only) ── */}
       {isExpanded && (
-        <div className="fixed inset-0 z-[200] bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f3460] flex flex-col md:hidden animate-in slide-in-from-bottom duration-300">
+        <div
+          className="fixed inset-0 z-[200] md:hidden flex flex-col overflow-hidden"
+          style={{ background: 'linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f0f0f 100%)' }}
+        >
+          {/* Safe area top */}
+          <div className="pt-[env(safe-area-inset-top)]" />
+
           {/* Header */}
-          <div className="flex items-center justify-between px-6 pt-12 pb-4">
-            <button onClick={() => setIsExpanded(false)} className="text-white/70 hover:text-white transition-colors">
-              <ChevronDown className="size-7" />
+          <div className="flex items-center justify-between px-5 py-3">
+            <button
+              onClick={() => setIsExpanded(false)}
+              className="w-10 h-10 flex items-center justify-center text-white/70 hover:text-white"
+            >
+              <ChevronDown className="size-6" />
             </button>
-            <div className="text-center">
-              <p className="text-xs text-white/60 uppercase tracking-widest font-bold">Reproduciendo ahora</p>
+            <div className="text-center flex-1 px-4">
+              <p className="text-xs text-white/50 uppercase tracking-widest font-semibold truncate">
+                {currentTrack.album || 'Reproduciendo ahora'}
+              </p>
             </div>
-            <button className="text-white/70 hover:text-white transition-colors">
+            <button className="w-10 h-10 flex items-center justify-center text-white/70 hover:text-white">
               <ListMusic className="size-5" />
             </button>
           </div>
 
           {/* Album Art */}
-          <div className="flex-1 flex items-center justify-center px-10">
+          <div className="flex-1 flex items-center justify-center px-8 py-4 min-h-0">
             <div className={cn(
-              "w-full max-w-xs aspect-square rounded-2xl overflow-hidden shadow-2xl transition-all duration-500",
-              isPlaying ? "scale-100 shadow-[0_20px_60px_rgba(0,0,0,0.8)]" : "scale-90 shadow-lg"
+              'w-full max-w-[280px] aspect-square rounded-2xl overflow-hidden shadow-2xl transition-all duration-500',
+              isPlaying
+                ? 'scale-100 shadow-[0_24px_80px_rgba(0,0,0,0.9)]'
+                : 'scale-[0.88] shadow-lg opacity-90'
             )}>
               <img
                 src={getValidImageUrl(currentTrack.imageUrl)}
@@ -77,12 +103,19 @@ export function MiniPlayer() {
             </div>
           </div>
 
-          {/* Track Info + Like */}
-          <div className="px-8 pb-4">
-            <div className="flex items-center justify-between mb-6">
-              <div className="min-w-0 flex-1">
-                <h2 className="text-2xl font-bold text-white truncate">{currentTrack.name}</h2>
-                <p className="text-white/60 text-base truncate">{currentTrack.artist}</p>
+          {/* Bottom controls */}
+          <div className="px-6 pb-[env(safe-area-inset-bottom)] space-y-5">
+            {/* Track info + like */}
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1 mr-4">
+                <h2 className="text-xl font-bold text-white truncate">{currentTrack.name}</h2>
+                <Link
+                  href={`/artist/${encodeURIComponent(currentTrack.artist)}`}
+                  onClick={() => setIsExpanded(false)}
+                  className="text-white/60 text-sm truncate block hover:text-white transition-colors"
+                >
+                  {currentTrack.artist}
+                </Link>
               </div>
               <button
                 onClick={async () => {
@@ -90,66 +123,68 @@ export function MiniPlayer() {
                   setIsLiked(next);
                   await toggleFavoriteAction(currentTrack.id, next);
                 }}
-                className="ml-4 flex-shrink-0"
+                className="flex-shrink-0 p-2"
               >
-                <Heart className={cn("size-7 transition-all", isLiked ? "text-[#1db954] fill-[#1db954] scale-110" : "text-white/60")} />
+                <Heart className={cn('size-6 transition-all', isLiked ? 'text-[#1db954] fill-[#1db954]' : 'text-white/50')} />
               </button>
             </div>
 
-            {/* Progress */}
-            <div className="mb-4">
+            {/* Progress bar */}
+            <div>
               <div
                 ref={progressRef}
-                className="h-1.5 bg-white/20 rounded-full cursor-pointer relative group mb-2"
+                className="h-1 bg-white/20 rounded-full cursor-pointer relative mb-1.5 active:h-2 transition-all"
                 onClick={handleProgressClick}
               >
-                <div className="h-full bg-white rounded-full transition-all" style={{ width: `${progress}%` }} />
-                <div
-                  className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                  style={{ left: `calc(${progress}% - 8px)` }}
-                />
+                <div className="h-full bg-white rounded-full" style={{ width: `${progress}%` }} />
               </div>
-              <div className="flex justify-between text-xs text-white/50 tabular-nums">
+              <div className="flex justify-between text-xs text-white/40 tabular-nums">
                 <span>{fmt(currentTime)}</span>
                 <span>{fmt(duration)}</span>
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="flex items-center justify-between mb-6">
+            {/* Main controls */}
+            <div className="flex items-center justify-between">
               <button
                 onClick={toggleShuffle}
-                className={cn("p-2 transition-colors", isShuffle ? "text-[#1db954]" : "text-white/60 hover:text-white")}
+                className={cn('p-2 transition-colors', isShuffle ? 'text-[#1db954]' : 'text-white/50')}
               >
                 <Shuffle className="size-5" />
               </button>
-              <button onClick={playPreviousTrack} className="text-white hover:scale-110 transition-transform p-2">
+              <button
+                onClick={playPreviousTrack}
+                className="p-2 text-white active:scale-90 transition-transform"
+              >
                 <SkipBack className="size-8 fill-white" />
               </button>
               <button
                 onClick={togglePlayPause}
-                className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xl hover:scale-105 transition-transform active:scale-95"
+                className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-transform"
               >
                 {isPlaying
                   ? <Pause className="size-7 fill-black text-black" />
                   : <Play className="size-7 fill-black text-black ml-1" />
                 }
               </button>
-              <button onClick={playNextTrack} className="text-white hover:scale-110 transition-transform p-2">
+              <button
+                onClick={playNextTrack}
+                className="p-2 text-white active:scale-90 transition-transform"
+              >
                 <SkipForward className="size-8 fill-white" />
               </button>
               <button
                 onClick={cycleRepeat}
-                className={cn("p-2 transition-colors", repeatMode !== 'off' ? "text-[#1db954]" : "text-white/60 hover:text-white")}
+                className={cn('p-2 transition-colors', repeatMode !== 'off' ? 'text-[#1db954]' : 'text-white/50')}
               >
                 {repeatMode === 'one' ? <Repeat1 className="size-5" /> : <Repeat className="size-5" />}
               </button>
             </div>
 
             {/* Volume */}
-            <div className="flex items-center gap-3 pb-8">
-              <button onClick={toggleMute} className="text-white/60 hover:text-white transition-colors">
-                {isMuted || volume === 0 ? <VolumeX className="size-5" /> : <Volume2 className="size-5" />}
+            <div className="flex items-center gap-3 pb-2">
+              <button onClick={toggleMute} className="text-white/50 hover:text-white transition-colors">
+                {isMuted || volume === 0 ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
               </button>
               <div
                 className="flex-1 h-1 bg-white/20 rounded-full cursor-pointer relative"
@@ -160,43 +195,45 @@ export function MiniPlayer() {
                   if (pct > 0) setIsMuted(false);
                 }}
               >
-                <div className="h-full bg-white rounded-full" style={{ width: `${volume}%` }} />
+                <div className="h-full bg-white/70 rounded-full" style={{ width: `${isMuted ? 0 : volume}%` }} />
               </div>
+              <Volume2 className="size-4 text-white/50" />
             </div>
           </div>
         </div>
       )}
 
-      {/* Mini bar tap area — mobile only, sits above the bottom nav */}
-      <div
-        className="fixed bottom-16 left-0 right-0 z-40 md:hidden cursor-pointer"
-        onClick={() => setIsExpanded(true)}
-      >
-        <div className="mx-2 mb-1 bg-[#282828] rounded-xl overflow-hidden shadow-2xl border border-white/5">
+      {/* ── MINI BAR (mobile only, above bottom nav) ── */}
+      <div className="fixed left-0 right-0 z-40 md:hidden" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
+        <div
+          className="mx-2 bg-[#282828] rounded-xl overflow-hidden shadow-2xl border border-white/5"
+          onClick={() => setIsExpanded(true)}
+        >
           {/* Progress line */}
           <div className="h-0.5 bg-white/10">
-            <div className="h-full bg-[#1db954] transition-all duration-500" style={{ width: `${progress}%` }} />
+            <div className="h-full bg-[#1db954] transition-all duration-300" style={{ width: `${progress}%` }} />
           </div>
-          <div className="flex items-center gap-3 px-3 py-2">
+          <div className="flex items-center gap-3 px-3 py-2.5">
             <img
               src={getValidImageUrl(currentTrack.imageUrl)}
               alt=""
               className="size-10 rounded-lg object-cover flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">{currentTrack.name}</p>
-              <p className="text-xs text-gray-400 truncate">{currentTrack.artist}</p>
+              <p className="text-sm font-semibold text-white truncate leading-tight">{currentTrack.name}</p>
+              <p className="text-xs text-gray-400 truncate leading-tight">{currentTrack.artist}</p>
             </div>
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {/* Controls — stop propagation so they don't open fullscreen */}
+            <div className="flex items-center" onClick={e => e.stopPropagation()}>
               <button
                 onClick={playPreviousTrack}
-                className="p-2 text-white/70 hover:text-white transition-colors"
+                className="w-10 h-10 flex items-center justify-center text-white/70 active:text-white"
               >
                 <SkipBack className="size-5 fill-current" />
               </button>
               <button
                 onClick={togglePlayPause}
-                className="p-2 text-white hover:scale-110 transition-transform"
+                className="w-10 h-10 flex items-center justify-center text-white active:scale-90 transition-transform"
               >
                 {isPlaying
                   ? <Pause className="size-6 fill-current" />
@@ -205,7 +242,7 @@ export function MiniPlayer() {
               </button>
               <button
                 onClick={playNextTrack}
-                className="p-2 text-white/70 hover:text-white transition-colors"
+                className="w-10 h-10 flex items-center justify-center text-white/70 active:text-white"
               >
                 <SkipForward className="size-5 fill-current" />
               </button>

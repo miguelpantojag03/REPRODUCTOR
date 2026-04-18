@@ -288,7 +288,8 @@ export function RightControls() {
 
 export function PlaybackControls() {
   return (
-    <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black via-black/95 to-black/90 border-t border-white/5 backdrop-blur-md">
+    // Solo visible en desktop (md+). En móvil se usa MiniPlayer
+    <div className="hidden md:block fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black via-black/95 to-black/90 border-t border-white/5 backdrop-blur-md">
       <div className="flex items-center justify-between px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] h-[72px]">
         <TrackInfo />
         <PlaybackButtons />

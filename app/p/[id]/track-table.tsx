@@ -402,7 +402,7 @@ export function TrackTable({
   const genres = Array.from(new Set(playlist.map((s) => s.genre).filter(Boolean))) as string[];
 
   return (
-    <div className="px-4 pb-32">
+    <div className="px-2 sm:px-4 pb-40 md:pb-32">
       {/* Filter bar */}
       {!playlistProp && genres.length > 0 && (
         <div className="flex items-center gap-2 mb-4 flex-wrap">

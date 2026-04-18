@@ -36,41 +36,41 @@ export default async function Page({
   const mostPlayed = !query && !liked ? await getMostPlayedSongs(5) : [];
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#121212] rounded-lg my-2 mr-2 relative">
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#121212] rounded-lg my-0 md:my-2 md:mr-2 relative">
       {/* Dynamic Background Gradient */}
       <div className="absolute top-0 inset-x-0 h-80 bg-gradient-to-b from-indigo-900/40 to-[#121212] pointer-events-none" />
 
       {/* Sticky Header */}
       <ScrollHeader query={query} />
 
-      <ScrollArea className="flex-1 mt-16 text-white pb-[69px]">
-        <div className="px-6 py-6 min-w-max relative z-10">
+      <ScrollArea className="flex-1 mt-14 sm:mt-16 text-white">
+        <div className="px-4 sm:px-6 py-4 sm:py-6 relative z-10 pb-40 md:pb-8">
 
           {/* Hero Section */}
           {!query && !liked && (
             <section className="mb-8">
-              <h1 className="text-[32px] font-bold mb-6 tracking-tight text-white mt-4">{getGreeting()}</h1>
+              <h1 className="text-2xl sm:text-[32px] font-bold mb-4 sm:mb-6 tracking-tight text-white mt-2 sm:mt-4">{getGreeting()}</h1>
               {topPlaylists.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                   {topPlaylists.map((playlist) => (
                     <Link
                       href={`/p/${playlist.id}`}
                       key={playlist.id}
-                      className="group relative flex items-center gap-4 bg-white/[0.05] hover:bg-white/20 transition-colors rounded overflow-hidden cursor-pointer h-16"
+                      className="group relative flex items-center gap-3 bg-white/[0.07] hover:bg-white/20 active:bg-white/25 transition-colors rounded-lg overflow-hidden cursor-pointer h-14"
                     >
-                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-500/40 to-purple-500/40 flex-shrink-0 flex items-center justify-center shadow-[4px_0_12px_rgba(0,0,0,0.5)] overflow-hidden">
+                      <div className="w-14 h-14 bg-gradient-to-br from-indigo-500/40 to-purple-500/40 flex-shrink-0 flex items-center justify-center shadow-[4px_0_12px_rgba(0,0,0,0.5)] overflow-hidden">
                         {playlist.coverUrl ? (
-                          <Image src={playlist.coverUrl} alt={playlist.name} width={64} height={64} className="object-cover w-full h-full" />
+                          <Image src={playlist.coverUrl} alt={playlist.name} width={56} height={56} className="object-cover w-full h-full" />
                         ) : (
-                          <Music className="text-white/60 size-6" />
+                          <Music className="text-white/60 size-5" />
                         )}
                       </div>
-                      <span className="font-bold text-[15px] drop-shadow-md pr-16 truncate">{playlist.name}</span>
-                      <button className="absolute right-4 opacity-0 group-hover:opacity-100 transition-all bg-[#1db954] text-black rounded-full p-3 shadow-xl transform translate-y-2 group-hover:translate-y-0 hover:scale-105 hover:bg-[#1fdf64] duration-200">
-                        <svg className="size-5 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                      <span className="font-bold text-sm drop-shadow-md pr-12 truncate">{playlist.name}</span>
+                      <div className="absolute right-3 opacity-0 group-hover:opacity-100 transition-all bg-[#1db954] text-black rounded-full p-2 shadow-xl transform translate-y-1 group-hover:translate-y-0 duration-200">
+                        <svg className="size-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M8 5v14l11-7z" />
                         </svg>
-                      </button>
+                      </div>
                     </Link>
                   ))}
                 </div>

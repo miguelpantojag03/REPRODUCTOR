@@ -37,24 +37,22 @@ export default async function PlaylistPage({
         </div>
       </div>
 
-      <div className="flex items-end py-4 px-6 space-x-5 relative z-10">
+      <div className="flex items-end py-4 px-4 sm:px-6 gap-4 sm:gap-5 relative z-10 flex-wrap sm:flex-nowrap">
         <CoverImage url={playlist.coverUrl} playlistId={playlist.id} />
         <div className="min-w-0 flex-1">
           <p className="text-xs text-white/60 uppercase tracking-widest font-bold mb-1">Lista de reproducción</p>
           <EditableTitle playlistId={playlist.id} initialName={playlist.name} />
-          <p className="text-sm text-gray-400 mt-2">
+          <p className="text-sm text-gray-400 mt-1.5">
             {playlist.trackCount} canciones • {formatDuration(playlist.duration)}
           </p>
-          <div className="mt-4">
+          <div className="mt-3">
             <PlayAllButton songs={playlist.songs} />
           </div>
         </div>
       </div>
 
       <ScrollArea className="flex-1 mt-2 relative z-10">
-        <div className="min-w-max">
-          <TrackTable playlist={playlist} />
-        </div>
+        <TrackTable playlist={playlist} />
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>

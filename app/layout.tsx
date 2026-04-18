@@ -44,8 +44,11 @@ export default function RootLayout({
             <Suspense fallback={<div className="h-[100dvh] w-full bg-black animate-pulse" />}>
               <PlaylistProvider playlistsPromise={playlistsPromise}>
                 <OptimisticPlaylists />
-                {children}
-                <NowPlaying />
+                {/* Main content area */}
+                <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+                  {children}
+                  <NowPlaying />
+                </div>
                 <PlaybackControls />
                 <MiniPlayer />
                 <MobileNav />
