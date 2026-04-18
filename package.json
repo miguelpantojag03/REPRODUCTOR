@@ -47,7 +47,8 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.2"
+    "@tailwindcss/postcss": "^4.2.2",
+    "tsx": "^4.21.0"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

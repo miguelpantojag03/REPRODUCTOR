@@ -12,6 +12,7 @@ import {
   VolumeX,
   Shuffle,
   Repeat,
+  Repeat1,
   Loader2,
 } from 'lucide-react';
 import { usePlayback } from '@/app/playback-context';
@@ -77,17 +78,24 @@ export function PlaybackButtons() {
     playPreviousTrack,
     currentTrack,
     isLoadingYouTube,
+    isShuffle,
+    toggleShuffle,
+    repeatMode,
+    cycleRepeat,
   } = usePlayback();
 
   return (
-    <div className="flex items-center space-x-6 mb-2">
+    <div className="flex items-center space-x-4 mb-2">
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-[#b3b3b3] hover:text-white"
+        className={cn("h-8 w-8 relative", isShuffle ? "text-[#1db954]" : "text-[#b3b3b3] hover:text-white")}
+        onClick={toggleShuffle}
         disabled={!currentTrack}
+        title="Aleatorio"
       >
         <Shuffle className="w-4 h-4" />
+        {isShuffle && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1db954]" />}
       </Button>
       <Button
         variant="ghost"
@@ -124,10 +132,17 @@ export function PlaybackButtons() {
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-[#b3b3b3] hover:text-white"
+        className={cn("h-8 w-8 relative", repeatMode !== 'off' ? "text-[#1db954]" : "text-[#b3b3b3] hover:text-white")}
+        onClick={cycleRepeat}
         disabled={!currentTrack}
+        title={repeatMode === 'off' ? 'Repetir' : repeatMode === 'all' ? 'Repetir todo' : 'Repetir una'}
       >
-        <Repeat className="w-4 h-4" />
+        {repeatMode === 'one' ? (
+          <Repeat1 className="w-4 h-4" />
+        ) : (
+          <Repeat className="w-4 h-4" />
+        )}
+        {repeatMode !== 'off' && <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#1db954]" />}
       </Button>
     </div>
   );
@@ -274,6 +289,8 @@ export function Volume() {
 }
 
 export function PlaybackControls() {
+  const { currentTrack } = usePlayback();
+
   return (
     <div className="fixed bottom-16 md:bottom-0 left-0 right-0 flex items-center justify-between px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] bg-[#000000] border-t border-white/5 shadow-2xl z-50">
       <TrackInfo />

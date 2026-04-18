@@ -11,9 +11,10 @@ import {
 } from 'react';
 import { Song } from '@/lib/db/types';
 import { DoublyLinkedList } from '@/lib/dll';
-import { getYouTubeIdAction } from './actions';
+import { getYouTubeIdAction, incrementPlayCountAction } from './actions';
 
 type Panel = 'sidebar' | 'tracklist' | 'now-playing';
+export type RepeatMode = 'off' | 'all' | 'one';
 
 type PlaybackContextType = {
   isPlaying: boolean;
@@ -37,23 +38,22 @@ type PlaybackContextType = {
   audioRef: React.RefObject<HTMLAudioElement | null>;
   activePanel: Panel;
   setActivePanel: (panel: Panel) => void;
-  registerPanelRef: (
-    panel: Panel,
-    ref: React.RefObject<HTMLElement | null>
-  ) => void;
+  registerPanelRef: (panel: Panel, ref: React.RefObject<HTMLElement | null>) => void;
   handleKeyNavigation: (e: React.KeyboardEvent, panel: Panel) => void;
   isLoadingYouTube: boolean;
+  // New features
+  isShuffle: boolean;
+  toggleShuffle: () => void;
+  repeatMode: RepeatMode;
+  cycleRepeat: () => void;
+  shuffledPlaylist: Song[];
 };
 
-const PlaybackContext = createContext<PlaybackContextType | undefined>(
-  undefined
-);
+const PlaybackContext = createContext<PlaybackContextType | undefined>(undefined);
 
 function useKeyboardNavigation() {
   const [activePanel, setActivePanel] = useState<Panel>('sidebar');
-  const panelRefs = useRef<
-    Record<Panel, React.RefObject<HTMLElement | null> | null>
-  >({
+  const panelRefs = useRef<Record<Panel, React.RefObject<HTMLElement | null> | null>>({
     sidebar: null,
     tracklist: null,
     'now-playing': null,
@@ -71,44 +71,32 @@ function useKeyboardNavigation() {
       const currentRef = panelRefs.current[panel];
       if (!currentRef?.current) return;
 
-      const items = Array.from(
-        currentRef.current.querySelectorAll('[tabindex="0"]')
-      );
+      const items = Array.from(currentRef.current.querySelectorAll('[tabindex="0"]'));
       const currentIndex = items.indexOf(document.activeElement as HTMLElement);
 
       switch (e.key) {
         case 'ArrowDown':
         case 'j':
           e.preventDefault();
-          const nextIndex = (currentIndex + 1) % items.length;
-          (items[nextIndex] as HTMLElement).focus();
+          (items[(currentIndex + 1) % items.length] as HTMLElement)?.focus();
           break;
         case 'ArrowUp':
         case 'k':
           e.preventDefault();
-          const prevIndex = (currentIndex - 1 + items.length) % items.length;
-          (items[prevIndex] as HTMLElement).focus();
+          (items[(currentIndex - 1 + items.length) % items.length] as HTMLElement)?.focus();
           break;
         case 'h':
           if (panel === 'tracklist') {
             e.preventDefault();
             setActivePanel('sidebar');
-            const sidebarFirstItem =
-              panelRefs.current.sidebar?.current?.querySelector(
-                '[tabindex="0"]'
-              ) as HTMLElement | null;
-            sidebarFirstItem?.focus();
+            (panelRefs.current.sidebar?.current?.querySelector('[tabindex="0"]') as HTMLElement | null)?.focus();
           }
           break;
         case 'l':
           if (panel === 'sidebar') {
             e.preventDefault();
             setActivePanel('tracklist');
-            const tracklistFirstItem =
-              panelRefs.current.tracklist?.current?.querySelector(
-                '[tabindex="0"]'
-              ) as HTMLElement | null;
-            tracklistFirstItem?.focus();
+            (panelRefs.current.tracklist?.current?.querySelector('[tabindex="0"]') as HTMLElement | null)?.focus();
           }
           break;
       }
@@ -119,27 +107,67 @@ function useKeyboardNavigation() {
   return { activePanel, setActivePanel, registerPanelRef, handleKeyNavigation };
 }
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export function PlaybackProvider({ children }: { children: ReactNode }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTrack, setCurrentTrack] = useState<Song | null>(null);
   const [currentTime, setCurrentTimeState] = useState(0);
   const [duration, setDurationState] = useState(0);
-  const [volume, setVolumeState] = useState(70);
   const [playlist, setPlaylistState] = useState<Song[]>([]);
   const [isLoadingYouTube, setIsLoadingYouTube] = useState(false);
+  const [isShuffle, setIsShuffle] = useState(false);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
+  const [shuffledPlaylist, setShuffledPlaylist] = useState<Song[]>([]);
+
+  // Persist volume in localStorage
+  const [volume, setVolumeState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('player-volume');
+      return saved ? Number(saved) : 70;
+    }
+    return 70;
+  });
+
   const playlistDLL = useRef(new DoublyLinkedList<Song>());
+  const shuffledDLL = useRef(new DoublyLinkedList<Song>());
   const audioRef = useRef<HTMLAudioElement>(null);
   const youtubePlayerRef = useRef<any>(null);
   const ytReadyRef = useRef(false);
-  // Use a ref to track the current track for YouTube state change callback
   const currentTrackRef = useRef<Song | null>(null);
+  const isShuffleRef = useRef(isShuffle);
+  const repeatModeRef = useRef(repeatMode);
 
-  // Keep currentTrackRef in sync
+  useEffect(() => { currentTrackRef.current = currentTrack; }, [currentTrack]);
+  useEffect(() => { isShuffleRef.current = isShuffle; }, [isShuffle]);
+  useEffect(() => { repeatModeRef.current = repeatMode; }, [repeatMode]);
+
+  // Persist volume
   useEffect(() => {
-    currentTrackRef.current = currentTrack;
-  }, [currentTrack]);
+    localStorage.setItem('player-volume', String(volume));
+  }, [volume]);
 
-  // Load YouTube IFrame API — only once
+  // Persist shuffle/repeat
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedShuffle = localStorage.getItem('player-shuffle');
+      const savedRepeat = localStorage.getItem('player-repeat') as RepeatMode | null;
+      if (savedShuffle) setIsShuffle(savedShuffle === 'true');
+      if (savedRepeat) setRepeatMode(savedRepeat);
+    }
+  }, []);
+
+  useEffect(() => { localStorage.setItem('player-shuffle', String(isShuffle)); }, [isShuffle]);
+  useEffect(() => { localStorage.setItem('player-repeat', repeatMode); }, [repeatMode]);
+
+  // Load YouTube IFrame API
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if ((window as any).YT && (window as any).YT.Player) {
@@ -148,8 +176,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     }
     const tag = document.createElement('script');
     tag.src = 'https://www.youtube.com/iframe_api';
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    document.getElementsByTagName('script')[0]?.parentNode?.insertBefore(tag, document.getElementsByTagName('script')[0]);
 
     (window as any).onYouTubeIframeAPIReady = initYTPlayer;
 
@@ -160,27 +187,15 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         height: '0',
         width: '0',
         videoId: '',
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          showinfo: 0,
-          modestbranding: 1,
-        },
+        playerVars: { autoplay: 0, controls: 0, showinfo: 0, modestbranding: 1 },
         events: {
           onStateChange: (event: any) => {
             const YT = (window as any).YT;
-            const state = event.data;
-            if (state === YT.PlayerState.ENDED) {
-              // Auto-advance handled by playNextTrack ref
+            if (event.data === YT.PlayerState.ENDED) {
               playNextTrackRef.current?.();
             }
-            // Don't auto-set isPlaying from YT state changes—
-            // we control it manually to avoid toggle conflicts
           },
-          onReady: () => {
-            // Player is initialized
-          }
-        }
+        },
       });
     }
   }, []);
@@ -196,9 +211,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
           if (typeof time === 'number') setCurrentTimeState(time);
           const dur = youtubePlayerRef.current.getDuration();
           if (typeof dur === 'number' && dur > 0) setDurationState(dur);
-        } catch {
-          // Player might not be ready yet
-        }
+        } catch { /* ignore */ }
       }, 500);
     }
     return () => clearInterval(interval);
@@ -207,30 +220,38 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   const setPlaylist = useCallback((songs: Song[]) => {
     playlistDLL.current = DoublyLinkedList.fromArray(songs);
     setPlaylistState(songs);
+    const shuffled = shuffleArray(songs);
+    shuffledDLL.current = DoublyLinkedList.fromArray(shuffled);
+    setShuffledPlaylist(shuffled);
   }, []);
 
-  const addTrack = useCallback(
-    (track: Song, position: 'start' | 'end' | number) => {
-      if (position === 'start') {
-        playlistDLL.current.addFirst(track);
-      } else if (position === 'end') {
-        playlistDLL.current.addLast(track);
-      } else {
-        playlistDLL.current.addAt(position, track);
-      }
-      setPlaylistState(playlistDLL.current.toArray());
-    },
-    []
-  );
+  const addTrack = useCallback((track: Song, position: 'start' | 'end' | number) => {
+    if (position === 'start') {
+      playlistDLL.current.addFirst(track);
+      shuffledDLL.current.addFirst(track);
+    } else if (position === 'end') {
+      playlistDLL.current.addLast(track);
+      shuffledDLL.current.addLast(track);
+    } else {
+      playlistDLL.current.addAt(position, track);
+      shuffledDLL.current.addAt(position, track);
+    }
+    setPlaylistState(playlistDLL.current.toArray());
+    setShuffledPlaylist(shuffledDLL.current.toArray());
+  }, []);
 
   const addToQueue = useCallback((track: Song) => {
     playlistDLL.current.addLast(track);
+    shuffledDLL.current.addLast(track);
     setPlaylistState(playlistDLL.current.toArray());
+    setShuffledPlaylist(shuffledDLL.current.toArray());
   }, []);
 
   const removeTrack = useCallback((trackId: string) => {
     playlistDLL.current.remove((s) => s.id === trackId);
+    shuffledDLL.current.remove((s) => s.id === trackId);
     setPlaylistState(playlistDLL.current.toArray());
+    setShuffledPlaylist(shuffledDLL.current.toArray());
   }, []);
 
   const reorderTrack = useCallback((trackId: string, targetIndex: number) => {
@@ -238,36 +259,40 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     setPlaylistState(playlistDLL.current.toArray());
   }, []);
 
-  const { activePanel, setActivePanel, registerPanelRef, handleKeyNavigation } =
-    useKeyboardNavigation();
+  const toggleShuffle = useCallback(() => {
+    setIsShuffle((prev) => {
+      const next = !prev;
+      if (next) {
+        // Re-shuffle keeping current track first
+        const current = currentTrackRef.current;
+        const arr = playlistDLL.current.toArray();
+        const others = arr.filter((s) => s.id !== current?.id);
+        const shuffled = current ? [current, ...shuffleArray(others)] : shuffleArray(arr);
+        shuffledDLL.current = DoublyLinkedList.fromArray(shuffled);
+        setShuffledPlaylist(shuffled);
+      }
+      return next;
+    });
+  }, []);
 
-  const togglePlayPause = useCallback(() => {
-    const isYT = currentTrack?.id.startsWith('itunes-');
-    if (isYT && youtubePlayerRef.current) {
-      if (isPlaying) {
-        youtubePlayerRef.current.pauseVideo();
-      } else {
-        youtubePlayerRef.current.playVideo();
-      }
-    } else if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-      }
-    }
-    setIsPlaying(prev => !prev);
-  }, [isPlaying, currentTrack]);
+  const cycleRepeat = useCallback(() => {
+    setRepeatMode((prev) => {
+      if (prev === 'off') return 'all';
+      if (prev === 'all') return 'one';
+      return 'off';
+    });
+  }, []);
+
+  const { activePanel, setActivePanel, registerPanelRef, handleKeyNavigation } = useKeyboardNavigation();
 
   const setVolume = useCallback((newVolume: number) => {
     setVolumeState(newVolume);
     if (audioRef.current) audioRef.current.volume = newVolume / 100;
     try {
       if (youtubePlayerRef.current?.setVolume) youtubePlayerRef.current.setVolume(newVolume);
-    } catch { /* player not ready */ }
+    } catch { /* ignore */ }
   }, []);
 
-  // Seek function — used by the progress bar
   const seekTo = useCallback((time: number) => {
     setCurrentTimeState(time);
     const isYT = currentTrack?.id.startsWith('itunes-');
@@ -278,106 +303,133 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     }
   }, [currentTrack]);
 
-  const playTrack = useCallback(
-    async (track: Song) => {
-      setCurrentTrack(track);
-      setCurrentTimeState(0);
-      setDurationState(0);
-      
-      // Stop all sources first
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-        audioRef.current.src = '';
-      }
-      try {
-        if (youtubePlayerRef.current?.stopVideo) {
-          youtubePlayerRef.current.stopVideo();
-        }
-      } catch { /* ignore */ }
+  const playTrack = useCallback(async (track: Song) => {
+    setCurrentTrack(track);
+    setCurrentTimeState(0);
+    setDurationState(0);
 
-      if (track.id.startsWith('itunes-')) {
-        // Online track — use YouTube
-        setIsLoadingYouTube(true);
-        try {
-          const result = await getYouTubeIdAction(track.name, track.artist);
-          setIsLoadingYouTube(false);
-          
-          if (result.success && result.videoId && youtubePlayerRef.current) {
-            youtubePlayerRef.current.loadVideoById(result.videoId);
-            youtubePlayerRef.current.setVolume(volume);
-            setIsPlaying(true);
-          } else if (audioRef.current && track.audioUrl) {
-            // Fallback to preview URL
-            audioRef.current.src = track.audioUrl;
-            audioRef.current.volume = volume / 100;
-            await audioRef.current.play();
-            setIsPlaying(true);
-          }
-        } catch (err) {
-          console.error('Error loading YouTube:', err);
-          setIsLoadingYouTube(false);
-          // Fallback
-          if (audioRef.current && track.audioUrl) {
-            audioRef.current.src = track.audioUrl;
-            audioRef.current.volume = volume / 100;
-            audioRef.current.play();
-            setIsPlaying(true);
-          }
-        }
-      } else {
-        // Local/DB track — use HTML audio
-        if (audioRef.current) {
-          let src = track.audioUrl || '';
-          if (track.isLocal && src) {
-            const filename = src.split('/').pop() || '';
-            src = `/api/audio/${encodeURIComponent(filename)}`;
-          }
-          audioRef.current.src = src;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = '';
+    }
+    try {
+      if (youtubePlayerRef.current?.stopVideo) youtubePlayerRef.current.stopVideo();
+    } catch { /* ignore */ }
+
+    // Track play count (fire and forget, only for DB songs)
+    if (!track.id.startsWith('itunes-')) {
+      incrementPlayCountAction(track.id).catch(() => {});
+    }
+
+    if (track.id.startsWith('itunes-')) {
+      setIsLoadingYouTube(true);
+      try {
+        const result = await getYouTubeIdAction(track.name, track.artist);
+        setIsLoadingYouTube(false);
+        if (result.success && result.videoId && youtubePlayerRef.current) {
+          youtubePlayerRef.current.loadVideoById(result.videoId);
+          youtubePlayerRef.current.setVolume(volume);
+          setIsPlaying(true);
+        } else if (audioRef.current && track.audioUrl) {
+          audioRef.current.src = track.audioUrl;
           audioRef.current.volume = volume / 100;
-          try {
-            await audioRef.current.play();
-          } catch { /* autoplay blocked */ }
+          await audioRef.current.play();
+          setIsPlaying(true);
+        }
+      } catch {
+        setIsLoadingYouTube(false);
+        if (audioRef.current && track.audioUrl) {
+          audioRef.current.src = track.audioUrl;
+          audioRef.current.volume = volume / 100;
+          audioRef.current.play();
           setIsPlaying(true);
         }
       }
-      setActivePanel('tracklist');
-    },
-    [setActivePanel, volume]
-  );
+    } else {
+      if (audioRef.current) {
+        let src = track.audioUrl || '';
+        if (track.isLocal && src) {
+          const filename = src.split('/').pop() || '';
+          src = `/api/audio/${encodeURIComponent(filename)}`;
+        }
+        audioRef.current.src = src;
+        audioRef.current.volume = volume / 100;
+        try {
+          await audioRef.current.play();
+        } catch { /* autoplay blocked */ }
+        setIsPlaying(true);
+      }
+    }
+    setActivePanel('tracklist');
+  }, [setActivePanel, volume]);
 
   const playNextTrack = useCallback(() => {
     const track = currentTrackRef.current;
+    const repeat = repeatModeRef.current;
+    const shuffle = isShuffleRef.current;
+
+    if (repeat === 'one' && track) {
+      playTrack(track);
+      return;
+    }
+
+    const dll = shuffle ? shuffledDLL.current : playlistDLL.current;
     if (track) {
-      const node = playlistDLL.current.find((t) => t.id === track.id);
-      if (node && node.next) {
+      const node = dll.find((t) => t.id === track.id);
+      if (node?.next) {
         playTrack(node.next.value);
-      } else if (playlistDLL.current.head) {
-        playTrack(playlistDLL.current.head.value);
+      } else if (repeat === 'all' && dll.head) {
+        playTrack(dll.head.value);
+      } else {
+        setIsPlaying(false);
       }
     }
   }, [playTrack]);
 
-  // Keep a ref so YouTube callback can call it without stale closure
   const playNextTrackRef = useRef(playNextTrack);
-  useEffect(() => {
-    playNextTrackRef.current = playNextTrack;
-  }, [playNextTrack]);
+  useEffect(() => { playNextTrackRef.current = playNextTrack; }, [playNextTrack]);
 
   const playPreviousTrack = useCallback(() => {
-    if (currentTrack) {
-      const node = playlistDLL.current.find((t) => t.id === currentTrack.id);
-      if (node && node.prev) {
+    const track = currentTrackRef.current;
+    const shuffle = isShuffleRef.current;
+    const dll = shuffle ? shuffledDLL.current : playlistDLL.current;
+
+    // If more than 3 seconds in, restart current track
+    if (audioRef.current && audioRef.current.currentTime > 3) {
+      audioRef.current.currentTime = 0;
+      setCurrentTimeState(0);
+      return;
+    }
+
+    if (track) {
+      const node = dll.find((t) => t.id === track.id);
+      if (node?.prev) {
         playTrack(node.prev.value);
-      } else if (playlistDLL.current.tail) {
-        playTrack(playlistDLL.current.tail.value);
+      } else if (dll.tail) {
+        playTrack(dll.tail.value);
       }
     }
-  }, [currentTrack, playTrack]);
+  }, [playTrack]);
 
+  const togglePlayPause = useCallback(() => {
+    const isYT = currentTrack?.id.startsWith('itunes-');
+    if (isYT && youtubePlayerRef.current) {
+      if (isPlaying) youtubePlayerRef.current.pauseVideo();
+      else youtubePlayerRef.current.playVideo();
+    } else if (audioRef.current) {
+      if (isPlaying) audioRef.current.pause();
+      else audioRef.current.play();
+    }
+    setIsPlaying((prev) => !prev);
+  }, [isPlaying, currentTrack]);
+
+  // Global keyboard shortcuts
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.key === ' ' && e.target === document.body) {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.key === ' ') {
         e.preventDefault();
         togglePlayPause();
       }
@@ -386,7 +438,21 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [togglePlayPause]);
 
-  // Handle audio element events for local playback
+  // MediaSession API
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !currentTrack) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.name,
+      artist: currentTrack.artist,
+      album: currentTrack.album || '',
+      artwork: currentTrack.imageUrl ? [{ src: currentTrack.imageUrl, sizes: '512x512', type: 'image/jpeg' }] : [],
+    });
+    navigator.mediaSession.setActionHandler('play', () => { audioRef.current?.play(); setIsPlaying(true); });
+    navigator.mediaSession.setActionHandler('pause', () => { audioRef.current?.pause(); setIsPlaying(false); });
+    navigator.mediaSession.setActionHandler('nexttrack', () => playNextTrackRef.current?.());
+    navigator.mediaSession.setActionHandler('previoustrack', playPreviousTrack);
+  }, [currentTrack, playPreviousTrack]);
+
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current && !currentTrack?.id.startsWith('itunes-')) {
       setCurrentTimeState(audioRef.current.currentTime);
@@ -430,10 +496,15 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         registerPanelRef,
         handleKeyNavigation,
         isLoadingYouTube,
+        isShuffle,
+        toggleShuffle,
+        repeatMode,
+        cycleRepeat,
+        shuffledPlaylist,
       }}
     >
       {children}
-      <div id="youtube-player" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }}></div>
+      <div id="youtube-player" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} />
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
@@ -447,8 +518,6 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
 export function usePlayback() {
   const context = useContext(PlaybackContext);
-  if (context === undefined) {
-    throw new Error('usePlayback must be used within a PlaybackProvider');
-  }
+  if (context === undefined) throw new Error('usePlayback must be used within a PlaybackProvider');
   return context;
 }

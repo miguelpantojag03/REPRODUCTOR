@@ -25,6 +25,8 @@ export let songs = pgTable(
     audioUrl: text('audio_url').notNull(),
     isLocal: boolean('is_local').notNull().default(true),
     favorite: boolean('favorite').notNull().default(false),
+    playCount: integer('play_count').notNull().default(0),
+    lastPlayedAt: timestamp('last_played_at'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow(),
   },

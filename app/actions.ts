@@ -251,3 +251,34 @@ export async function saveOnlineTrackAction(track: any) {
     return { success: false, error: 'Failed' };
   }
 }
+
+export async function incrementPlayCountAction(trackId: string) {
+  try {
+    await db
+      .update(songs)
+      .set({
+        playCount: sql`${songs.playCount} + 1`,
+        lastPlayedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(songs.id, trackId));
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (error) {
+    return { success: false };
+  }
+}
+
+export async function deleteSongAction(trackId: string) {
+  try {
+    // Remove from all playlists first
+    await db.delete(playlistSongs).where(eq(playlistSongs.songId, trackId));
+    // Delete the song
+    await db.delete(songs).where(eq(songs.id, trackId));
+    revalidatePath('/', 'layout');
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting song:', error);
+    return { success: false, error: 'Failed to delete song' };
+  }
+}

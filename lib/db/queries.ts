@@ -168,3 +168,39 @@ export let getRecentlyAddedSongs = unstable_cache(
   ['recently-added-songs'],
   { tags: ['songs'] }
 );
+
+export let getRecentlyPlayedSongs = unstable_cache(
+  async (limit: number = 6) => {
+    return db
+      .select()
+      .from(songs)
+      .where(sql`${songs.lastPlayedAt} IS NOT NULL`)
+      .orderBy(desc(songs.lastPlayedAt))
+      .limit(limit);
+  },
+  ['recently-played-songs'],
+  { tags: ['songs'] }
+);
+
+export let getMostPlayedSongs = unstable_cache(
+  async (limit: number = 10) => {
+    return db
+      .select()
+      .from(songs)
+      .where(sql`${songs.playCount} > 0`)
+      .orderBy(desc(songs.playCount))
+      .limit(limit);
+  },
+  ['most-played-songs'],
+  { tags: ['songs'] }
+);
+
+export let deleteSong = async (id: string) => {
+  // Remove from all playlists first
+  await db.delete(playlistSongs).where(eq(playlistSongs.songId, id));
+  // Then delete the song
+  const result = await db.delete(songs).where(eq(songs.id, id));
+  revalidateTag('songs', 'max' as any);
+  revalidateTag('playlists', 'max' as any);
+  return result;
+};
