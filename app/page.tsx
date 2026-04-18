@@ -1,7 +1,7 @@
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { TrackTable } from './p/[id]/track-table';
 import { Suspense } from 'react';
-import { Loader2, Music, Clock, TrendingUp } from 'lucide-react';
+import { Loader2, Music, Clock, TrendingUp, ChevronRight, Sparkles } from 'lucide-react';
 import { getAllPlaylists, getRecentlyPlayedSongs, getMostPlayedSongs } from '@/lib/db/queries';
 import { searchOnlineTracksAction, searchOnlineAlbumsAction } from './actions';
 import { OnlineResults } from './online-results';
@@ -14,129 +14,156 @@ import { LibraryStats as LibraryStatsClient } from './library-stats';
 import { RecentSongCard, MostPlayedRow } from './home-sections';
 
 function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return '¡Buenos días!';
-  if (hour < 18) return '¡Buenas tardes!';
-  return '¡Buenas noches!';
+  const h = new Date().getHours();
+  if (h < 6)  return 'Buenas noches 🌙';
+  if (h < 12) return 'Buenos días ☀️';
+  if (h < 18) return 'Buenas tardes 🎵';
+  return 'Buenas noches 🌙';
 }
 
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ q: string; liked?: string }>;
+  searchParams: Promise<{ q?: string; liked?: string }>;
 }) {
   const params = await searchParams;
-  const query = params.q;
+  const query = params.q || '';
   const liked = params.liked === 'true';
-  const playlists = await getAllPlaylists();
-  const topPlaylists = playlists.slice(0, 6);
-  const onlineTracks = query ? await searchOnlineTracksAction(query) : [];
-  const onlineAlbums = query ? await searchOnlineAlbumsAction(query) : [];
-  const recentlyPlayed = !query && !liked ? await getRecentlyPlayedSongs(6) : [];
-  const mostPlayed = !query && !liked ? await getMostPlayedSongs(5) : [];
+
+  const [playlists, onlineTracks, onlineAlbums, recentlyPlayed, mostPlayed] = await Promise.all([
+    getAllPlaylists(),
+    query ? searchOnlineTracksAction(query) : Promise.resolve([]),
+    query ? searchOnlineAlbumsAction(query) : Promise.resolve([]),
+    (!query && !liked) ? getRecentlyPlayedSongs(8) : Promise.resolve([]),
+    (!query && !liked) ? getMostPlayedSongs(6) : Promise.resolve([]),
+  ]);
+
+  const topPlaylists = playlists.slice(0, 8);
+  const isHome = !query && !liked;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#121212] rounded-lg my-0 md:my-2 md:mr-2 relative">
-      {/* Dynamic Background Gradient */}
-      <div className="absolute top-0 inset-x-0 h-80 bg-gradient-to-b from-indigo-900/40 to-[#121212] pointer-events-none" />
+    <div className="flex-1 flex flex-col overflow-hidden bg-[#121212] rounded-none md:rounded-xl md:my-2 md:mr-2 relative">
+      {/* Ambient gradient */}
+      <div className="absolute top-0 inset-x-0 h-72 bg-gradient-to-b from-indigo-950/50 via-[#121212]/80 to-transparent pointer-events-none" />
 
-      {/* Sticky Header */}
       <ScrollHeader query={query} />
 
-      <ScrollArea className="flex-1 mt-14 sm:mt-16 text-white">
-        <div className="px-4 sm:px-6 py-4 sm:py-6 relative z-10 pb-40 md:pb-8">
+      <ScrollArea className="flex-1 mt-14 sm:mt-16">
+        <div className="relative z-10 pb-40 md:pb-10">
 
-          {/* Hero Section */}
-          {!query && !liked && (
-            <section className="mb-8">
-              <h1 className="text-2xl sm:text-[32px] font-bold mb-4 sm:mb-6 tracking-tight text-white mt-2 sm:mt-4">{getGreeting()}</h1>
+          {/* ── HOME ── */}
+          {isHome && (
+            <div className="px-4 sm:px-6 pt-6 space-y-8">
+
+              {/* Greeting */}
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{getGreeting()}</h1>
+                <p className="text-sm text-[#6b7280] mt-1">¿Qué quieres escuchar hoy?</p>
+              </div>
+
+              {/* Quick access playlists */}
               {topPlaylists.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-                  {topPlaylists.map((playlist) => (
-                    <Link
-                      href={`/p/${playlist.id}`}
-                      key={playlist.id}
-                      className="group relative flex items-center gap-3 bg-white/[0.07] hover:bg-white/20 active:bg-white/25 transition-colors rounded-lg overflow-hidden cursor-pointer h-14"
-                    >
-                      <div className="w-14 h-14 bg-gradient-to-br from-indigo-500/40 to-purple-500/40 flex-shrink-0 flex items-center justify-center shadow-[4px_0_12px_rgba(0,0,0,0.5)] overflow-hidden">
-                        {playlist.coverUrl ? (
-                          <Image src={playlist.coverUrl} alt={playlist.name} width={56} height={56} className="object-cover w-full h-full" />
-                        ) : (
-                          <Music className="text-white/60 size-5" />
-                        )}
-                      </div>
-                      <span className="font-bold text-sm drop-shadow-md pr-12 truncate">{playlist.name}</span>
-                      <div className="absolute right-3 opacity-0 group-hover:opacity-100 transition-all bg-[#1db954] text-black rounded-full p-2 shadow-xl transform translate-y-1 group-hover:translate-y-0 duration-200">
-                        <svg className="size-4 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-base font-bold text-white">Acceso rápido</h2>
+                    <Link href="#library" className="text-xs text-[#6b7280] hover:text-white transition-colors flex items-center gap-1">
+                      Ver todo <ChevronRight className="size-3" />
                     </Link>
-                  ))}
-                </div>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {topPlaylists.map(pl => (
+                      <Link
+                        key={pl.id}
+                        href={`/p/${pl.id}`}
+                        className="group flex items-center gap-3 bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.16] rounded-lg overflow-hidden transition-all duration-150 h-14"
+                      >
+                        <div className="w-14 h-14 flex-shrink-0 overflow-hidden">
+                          {pl.coverUrl ? (
+                            <Image src={pl.coverUrl} alt={pl.name} width={56} height={56} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-indigo-500/40 to-purple-600/40 flex items-center justify-center">
+                              <Music className="size-5 text-white/50" />
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-semibold text-white truncate pr-3 flex-1">{pl.name}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
               )}
-            </section>
+
+              {/* Recently played */}
+              {recentlyPlayed.length > 0 && (
+                <section>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Clock className="size-4 text-[#1db954]" />
+                      <h2 className="text-base font-bold text-white">Escuchado recientemente</h2>
+                    </div>
+                    <Link href="/history" className="text-xs text-[#6b7280] hover:text-white transition-colors flex items-center gap-1">
+                      Ver historial <ChevronRight className="size-3" />
+                    </Link>
+                  </div>
+                  <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+                    {recentlyPlayed.map(song => <RecentSongCard key={song.id} song={song} />)}
+                  </div>
+                </section>
+              )}
+
+              {/* Most played */}
+              {mostPlayed.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp className="size-4 text-[#1db954]" />
+                    <h2 className="text-base font-bold text-white">Más escuchadas</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                    {mostPlayed.map((song, i) => <MostPlayedRow key={song.id} song={song} rank={i + 1} />)}
+                  </div>
+                </section>
+              )}
+
+              {/* Library divider */}
+              <div id="library" className="flex items-center gap-3 pt-2">
+                <div className="flex-1 h-px bg-white/5" />
+                <span className="text-xs text-[#6b7280] font-medium uppercase tracking-widest">Tu biblioteca</span>
+                <div className="flex-1 h-px bg-white/5" />
+              </div>
+
+              <LibraryStatsClient />
+            </div>
           )}
 
-          {/* Recently Played */}
-          {recentlyPlayed.length > 0 && (
-            <section className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="size-5 text-[#1db954]" />
-                  <h2 className="text-xl font-bold">Escuchado recientemente</h2>
-                </div>
-                <Link href="/?q=" className="text-sm text-[#b3b3b3] hover:text-white transition-colors font-medium">
-                  Ver todo
-                </Link>
-              </div>
-              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                {recentlyPlayed.map((song) => (
-                  <RecentSongCard key={song.id} song={song} />
-                ))}
-              </div>
-            </section>
+          {/* ── LIKED / SEARCH HEADER ── */}
+          {(query || liked) && (
+            <div className="px-4 sm:px-6 pt-6 pb-2">
+              <h2 className="text-2xl font-black text-white">
+                {liked ? '❤️ Tus me gusta' : `Resultados para "${query}"`}
+              </h2>
+            </div>
           )}
 
-          {/* Most Played */}
-          {mostPlayed.length > 0 && (
-            <section className="mb-8">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="size-5 text-[#1db954]" />
-                  <h2 className="text-xl font-bold">Más escuchadas</h2>
-                </div>
-                <Link href="/?q=" className="text-sm text-[#b3b3b3] hover:text-white transition-colors font-medium">
-                  Ver todo
-                </Link>
-              </div>
-              <div className="space-y-1">
-                {mostPlayed.map((song, i) => (
-                  <MostPlayedRow key={song.id} song={song} rank={i + 1} />
-                ))}
-              </div>
-            </section>
+          {/* ── TRACK TABLE ── */}
+          <Suspense fallback={
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="size-6 text-[#1db954] animate-spin" />
+            </div>
+          }>
+            <TrackTable query={query} liked={liked} />
+          </Suspense>
+
+          {/* ── ONLINE RESULTS ── */}
+          {query && onlineAlbums.length > 0 && (
+            <div className="px-4 sm:px-6">
+              <OnlineAlbums albums={onlineAlbums} />
+            </div>
           )}
-
-          {/* Main Track Table */}
-          <section>
-            {(query || liked) && (
-              <h2 className="text-2xl font-bold mb-4">{liked ? 'Tus me gusta' : 'En tu biblioteca'}</h2>
-            )}
-            {!query && !liked && <LibraryStatsClient />}
-            <Suspense
-              fallback={
-                <div className="w-full h-full flex items-center justify-center p-20">
-                  <Loader2 className="animate-spin text-gray-500" />
-                </div>
-              }
-            >
-              <TrackTable query={query} liked={liked} />
-            </Suspense>
-          </section>
-
-          {query && onlineAlbums.length > 0 && <OnlineAlbums albums={onlineAlbums} />}
-          {query && onlineTracks.length > 0 && <OnlineResults tracks={onlineTracks} />}
+          {query && onlineTracks.length > 0 && (
+            <div className="px-4 sm:px-6">
+              <OnlineResults tracks={onlineTracks} />
+            </div>
+          )}
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>

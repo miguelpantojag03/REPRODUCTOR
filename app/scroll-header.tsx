@@ -9,31 +9,20 @@ export function ScrollHeader({ query }: { query?: string }) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = (e: Event) => {
-      const target = e.target as HTMLElement;
-      setScrolled(target.scrollTop > 50);
-    };
-    window.addEventListener('scroll', handleScroll, true);
-    return () => window.removeEventListener('scroll', handleScroll, true);
+    const onScroll = (e: Event) => setScrolled((e.target as HTMLElement).scrollTop > 40);
+    window.addEventListener('scroll', onScroll, true);
+    return () => window.removeEventListener('scroll', onScroll, true);
   }, []);
 
   return (
-    <header
-      className={cn(
-        'absolute top-0 inset-x-0 z-20 flex items-center justify-between px-3 sm:px-6 transition-all duration-300',
-        'h-14 sm:h-16',
-        scrolled
-          ? 'bg-[#121212]/90 backdrop-blur-md border-b border-white/5 shadow-md'
-          : 'bg-transparent'
-      )}
-    >
-      {/* Search — full width on mobile, fixed width on desktop */}
-      <div className="flex-1 sm:flex-none">
+    <header className={cn(
+      'absolute top-0 inset-x-0 z-20 flex items-center gap-3 px-4 sm:px-6 h-14 sm:h-16 transition-all duration-200',
+      scrolled ? 'bg-[#121212]/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'
+    )}>
+      <div className="flex-1">
         <SearchInput value={query} />
       </div>
-
-      {/* Right actions */}
-      <div className="hidden sm:flex items-center gap-2 ml-3">
+      <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
         <KeyboardShortcuts />
       </div>
     </header>

@@ -1,231 +1,169 @@
 @import "tailwindcss";
 @config "../tailwind.config.ts";
 
-/* Better font rendering & smooth scrolling */
+/* ─── Design Tokens ─────────────────────────────────────────── */
+:root {
+  --green:        #1db954;
+  --green-light:  #1ed760;
+  --bg-base:      #0a0a0a;
+  --bg-elevated:  #121212;
+  --bg-card:      #181818;
+  --bg-highlight: #282828;
+  --bg-press:     #333333;
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-muted:   #6b7280;
+  --border:       rgba(255,255,255,0.06);
+  --radius:       0.5rem;
+}
+
+/* ─── Base ───────────────────────────────────────────────────── */
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* Better focus styles */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ─── Focus ──────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid #1db954;
+  outline: 2px solid var(--green);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --radius: 0.5rem;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-  }
+tr:focus { outline: none; }
 
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
-}
-
-@layer base {
-  * {
-    border-color: hsl(var(--border));
-  }
-
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-  }
-}
-
-/* There's custom focus styles for the TrackTable */
-tr:focus {
-  outline: none;
-}
-
-/* Now-playing equalizer bar animations */
-@keyframes now-playing-1 {
-  0%, 100% { height: 3px; }
-  50% { height: 12px; }
-}
-@keyframes now-playing-2 {
-  0%, 100% { height: 8px; }
-  50% { height: 4px; }
-}
-@keyframes now-playing-3 {
-  0%, 100% { height: 5px; }
-  50% { height: 12px; }
-}
-
-.animate-now-playing-1 {
-  animation: now-playing-1 0.8s ease-in-out infinite;
-}
-.animate-now-playing-2 {
-  animation: now-playing-2 0.6s ease-in-out infinite 0.2s;
-}
-.animate-now-playing-3 {
-  animation: now-playing-3 0.7s ease-in-out infinite 0.4s;
-}
-
-/* Custom scrollbar for dark theme */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+/* ─── Scrollbars ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.12);
   border-radius: 999px;
+  transition: background 0.2s;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,0.3);
-}
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
-/* Smooth transition for drag-and-drop */
-[draggable="true"] {
-  cursor: grab;
-}
-[draggable="true"]:active {
-  cursor: grabbing;
-  opacity: 0.7;
-}
-
-/* Pulse animation for loading states */
-@keyframes pulse-green {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-.animate-pulse-green {
-  animation: pulse-green 1.5s ease-in-out infinite;
-}
-
-/* Slide up animation for mini player */
-@keyframes slide-up {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-/* Waveform bars for visualizer */
-@keyframes wave-1 { 0%,100%{height:4px} 50%{height:16px} }
-@keyframes wave-2 { 0%,100%{height:8px} 50%{height:4px} }
-@keyframes wave-3 { 0%,100%{height:6px} 50%{height:20px} }
-@keyframes wave-4 { 0%,100%{height:12px} 50%{height:6px} }
-@keyframes wave-5 { 0%,100%{height:5px} 50%{height:14px} }
-
-.wave-bar-1 { animation: wave-1 0.8s ease-in-out infinite; }
-.wave-bar-2 { animation: wave-2 0.6s ease-in-out infinite 0.1s; }
-.wave-bar-3 { animation: wave-3 0.9s ease-in-out infinite 0.2s; }
-.wave-bar-4 { animation: wave-4 0.7s ease-in-out infinite 0.15s; }
-.wave-bar-5 { animation: wave-5 0.85s ease-in-out infinite 0.3s; }
-
-/* Glow effect for active track */
-.track-glow {
-  box-shadow: 0 0 20px rgba(29, 185, 84, 0.3);
-}
-
-/* Scrollbar hide utility */
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Gradient text */
-.gradient-text {
-  background: linear-gradient(135deg, #1db954, #1ed760);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+/* ─── Drag & Drop ────────────────────────────────────────────── */
+[draggable="true"] { cursor: grab; user-select: none; }
+[draggable="true"]:active { cursor: grabbing; opacity: 0.6; }
 
-/* Green gradient text utility */
-.text-gradient {
-  background: linear-gradient(135deg, #1db954 0%, #1ed760 50%, #17a349 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+/* ─── Equalizer Bars ─────────────────────────────────────────── */
+@keyframes eq1 { 0%,100%{height:3px}  50%{height:14px} }
+@keyframes eq2 { 0%,100%{height:9px}  50%{height:4px}  }
+@keyframes eq3 { 0%,100%{height:5px}  50%{height:14px} }
+@keyframes eq4 { 0%,100%{height:11px} 50%{height:5px}  }
+@keyframes eq5 { 0%,100%{height:6px}  50%{height:16px} }
 
-/* Float animation */
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-}
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
+.animate-now-playing-1 { animation: eq1 0.8s ease-in-out infinite; }
+.animate-now-playing-2 { animation: eq2 0.6s ease-in-out infinite 0.15s; }
+.animate-now-playing-3 { animation: eq3 0.7s ease-in-out infinite 0.3s; }
 
-/* Glow pulse for active track */
+.wave-bar-1 { animation: eq1 0.8s ease-in-out infinite; }
+.wave-bar-2 { animation: eq2 0.6s ease-in-out infinite 0.1s; }
+.wave-bar-3 { animation: eq3 0.9s ease-in-out infinite 0.2s; }
+.wave-bar-4 { animation: eq4 0.7s ease-in-out infinite 0.15s; }
+.wave-bar-5 { animation: eq5 0.85s ease-in-out infinite 0.3s; }
+
+/* ─── Glow ───────────────────────────────────────────────────── */
 @keyframes glow-pulse {
-  0%, 100% { box-shadow: 0 0 12px rgba(29, 185, 84, 0.4), 0 0 24px rgba(29, 185, 84, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(29, 185, 84, 0.7), 0 0 40px rgba(29, 185, 84, 0.35); }
+  0%,100% { box-shadow: 0 0 0 0 rgba(29,185,84,0); }
+  50%     { box-shadow: 0 0 16px 4px rgba(29,185,84,0.35); }
 }
-.animate-glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
-}
+.animate-glow-pulse { animation: glow-pulse 2.5s ease-in-out infinite; }
 
-/* Glass morphism */
-.glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Shimmer loading effect */
+/* ─── Shimmer ────────────────────────────────────────────────── */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
 .shimmer {
-  background: linear-gradient(90deg, #282828 25%, #333 50%, #282828 75%);
+  background: linear-gradient(90deg, #1a1a1a 25%, #242424 50%, #1a1a1a 75%);
   background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 1.4s infinite;
+}
+
+/* ─── Slide / Fade ───────────────────────────────────────────── */
+@keyframes slide-up {
+  from { transform: translateY(12px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-slide-up { animation: slide-up 0.25s ease-out; }
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in { animation: fade-in 0.2s ease-out; }
+
+/* ─── Glass ──────────────────────────────────────────────────── */
+.glass {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.07);
+}
+
+.glass-dark {
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ─── Gradient Text ──────────────────────────────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Track Glow ─────────────────────────────────────────────── */
+.track-active-glow {
+  box-shadow: inset 0 0 0 1px rgba(29,185,84,0.2), 0 0 20px rgba(29,185,84,0.08);
+}
+
+/* ─── Radix Slider override ──────────────────────────────────── */
+[data-radix-slider-thumb] {
+  transition: transform 0.1s, opacity 0.1s;
+}
+
+/* ─── Tailwind dark mode vars ────────────────────────────────── */
+@layer base {
+  .dark {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 64%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 10%;
+    --input: 0 0% 10%;
+    --ring: 142 71% 45%;
+    --radius: 0.5rem;
+  }
+  * { border-color: hsl(var(--border)); }
+  body { background-color: hsl(var(--background)); color: hsl(var(--foreground)); }
 }

@@ -11,12 +11,12 @@ import { MobileNav } from './mobile-nav';
 import { PlaybackControls } from './playback-controls';
 import { ToastProvider } from './toast-provider';
 import { MiniPlayer } from './mini-player';
-import { KeyboardShortcuts } from './keyboard-shortcuts';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
-  title: 'Next.js Music Player',
-  description: 'A music player built with Next.js.',
+  title: 'Reproductor de Música',
+  description: 'Tu biblioteca musical personal.',
+  icons: { icon: '/favicon.ico' },
 };
 
 export const viewport: Viewport = {
@@ -27,24 +27,29 @@ export const viewport: Viewport = {
   themeColor: '#0A0A0A',
 };
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const playlistsPromise = getAllPlaylists();
 
   return (
-    <html lang="en" className={cn(inter.className, "dark")}>
-      <body className="flex flex-col md:flex-row h-[100dvh] text-gray-200 bg-black overflow-hidden selection:bg-[#1db954]/30">
+    <html lang="es" className={cn(inter.variable, 'dark')}>
+      <body className="flex flex-col md:flex-row h-[100dvh] text-gray-200 bg-[#0a0a0a] overflow-hidden selection:bg-[#1db954]/30 font-sans antialiased">
         <PlaybackProvider>
           <ToastProvider>
-            <Suspense fallback={<div className="h-[100dvh] w-full bg-black animate-pulse" />}>
+            <Suspense fallback={
+              <div className="h-[100dvh] w-full bg-[#0a0a0a] flex items-center justify-center">
+                <div className="flex items-end gap-1 h-8">
+                  <div className="w-1 bg-[#1db954] rounded-full wave-bar-1" />
+                  <div className="w-1 bg-[#1db954] rounded-full wave-bar-2" />
+                  <div className="w-1 bg-[#1db954] rounded-full wave-bar-3" />
+                  <div className="w-1 bg-[#1db954] rounded-full wave-bar-4" />
+                  <div className="w-1 bg-[#1db954] rounded-full wave-bar-5" />
+                </div>
+              </div>
+            }>
               <PlaylistProvider playlistsPromise={playlistsPromise}>
                 <OptimisticPlaylists />
-                {/* Main content area */}
                 <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
                   {children}
                   <NowPlaying />
