@@ -19,7 +19,7 @@ function formatTime(t: number) {
 }
 
 export function TrackInfo({ onExpand }: { onExpand?: () => void }) {
-  const { currentTrack, isPlaying, setActivePanel } = usePlayback();
+  const { currentTrack, isPlaying, setActivePanel, updateTrackInPlaylist } = usePlayback();
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
@@ -30,8 +30,12 @@ export function TrackInfo({ onExpand }: { onExpand?: () => void }) {
     if (!currentTrack) return;
     const next = !isLiked;
     setIsLiked(next);
+    updateTrackInPlaylist(currentTrack.id, { favorite: next });
     const result = await toggleFavoriteAction(currentTrack.id, next);
-    if (!result.success) setIsLiked(!next);
+    if (!result.success) {
+      setIsLiked(!next);
+      updateTrackInPlaylist(currentTrack.id, { favorite: !next });
+    }
   };
 
   return (

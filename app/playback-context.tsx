@@ -49,6 +49,7 @@ type PlaybackContextType = {
   shuffledPlaylist: Song[];
   playbackSpeed: number;
   setPlaybackSpeed: (speed: number) => void;
+  updateTrackInPlaylist: (trackId: string, updates: Partial<Song>) => void;
 };
 
 const PlaybackContext = createContext<PlaybackContextType | undefined>(undefined);
@@ -244,8 +245,16 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addToQueue = useCallback((track: Song) => {
-    playlistDLL.current.addLast(track);
-    shuffledDLL.current.addLast(track);
+    // Check if track already exists in playlist to avoid duplicates in queue display
+    const exists = playlistDLL.current.find((s) => s.id === track.id);
+    if (!exists) {
+      playlistDLL.current.addLast(track);
+      shuffledDLL.current.addLast(track);
+    } else {
+      // Still add to end for queue purposes (user explicitly wants it next)
+      playlistDLL.current.addLast(track);
+      shuffledDLL.current.addLast(track);
+    }
     setPlaylistState(playlistDLL.current.toArray());
     setShuffledPlaylist(shuffledDLL.current.toArray());
   }, []);
@@ -255,6 +264,20 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     shuffledDLL.current.remove((s) => s.id === trackId);
     setPlaylistState(playlistDLL.current.toArray());
     setShuffledPlaylist(shuffledDLL.current.toArray());
+  }, []);
+
+  // Update a track's properties in the playlist (e.g. favorite status)
+  const updateTrackInPlaylist = useCallback((trackId: string, updates: Partial<Song>) => {
+    const updateDLL = (dll: DoublyLinkedList<Song>) => {
+      const node = dll.find((s) => s.id === trackId);
+      if (node) node.value = { ...node.value, ...updates };
+    };
+    updateDLL(playlistDLL.current);
+    updateDLL(shuffledDLL.current);
+    setPlaylistState(playlistDLL.current.toArray());
+    setShuffledPlaylist(shuffledDLL.current.toArray());
+    // Also update currentTrack if it's the same
+    setCurrentTrack(prev => prev?.id === trackId ? { ...prev, ...updates } : prev);
   }, []);
 
   const reorderTrack = useCallback((trackId: string, targetIndex: number) => {
@@ -316,6 +339,15 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     setCurrentTrack(track);
     setCurrentTimeState(0);
     setDurationState(0);
+
+    // If track is not in the playlist, add it so next/prev navigation works
+    const existsInDLL = playlistDLL.current.find((s) => s.id === track.id);
+    if (!existsInDLL) {
+      playlistDLL.current.addLast(track);
+      shuffledDLL.current.addLast(track);
+      setPlaylistState(playlistDLL.current.toArray());
+      setShuffledPlaylist(shuffledDLL.current.toArray());
+    }
 
     if (audioRef.current) {
       audioRef.current.pause();
@@ -571,6 +603,7 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
         shuffledPlaylist,
         playbackSpeed,
         setPlaybackSpeed,
+        updateTrackInPlaylist,
       }}
     >
       {children}

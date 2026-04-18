@@ -71,6 +71,7 @@ function TrackRow({
     reorderTrack,
     addToQueue,
     playlist,
+    updateTrackInPlaylist,
   } = usePlayback();
   const { playlists } = usePlaylist();
   const { toast } = useToast();
@@ -83,8 +84,13 @@ function TrackRow({
     e.stopPropagation();
     const nextState = !isLiked;
     setIsLiked(nextState);
+    // Update the playlist context immediately so liked filter works
+    updateTrackInPlaylist(track.id, { favorite: nextState });
     const result = await toggleFavoriteAction(track.id, nextState);
-    if (!result.success) setIsLiked(!nextState);
+    if (!result.success) {
+      setIsLiked(!nextState);
+      updateTrackInPlaylist(track.id, { favorite: !nextState });
+    }
   }
 
   async function handleDeleteSong(e: React.MouseEvent) {

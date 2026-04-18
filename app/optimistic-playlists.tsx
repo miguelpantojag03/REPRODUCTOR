@@ -1,7 +1,7 @@
 'use client';
 
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, MoreVertical, Trash, Home, Search, Library, Music, Clock, Music2 } from 'lucide-react';
+import { Plus, MoreVertical, Trash, Home, Search, Library, Music, Clock } from 'lucide-react';
 import { useRef, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -186,16 +186,8 @@ export function OptimisticPlaylists() {
       className="hidden md:flex flex-col w-[280px] bg-black h-[100dvh] overflow-hidden p-2 gap-2"
       onClick={() => setActivePanel('sidebar')}
     >
-      {/* Top Panel: Logo + Nav */}
-      <div className="bg-[#121212] rounded-lg px-3 py-4 space-y-4">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 px-2 mb-1">
-          <div className="size-8 bg-[#1db954] rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-[#1db954]/20">
-            <Music2 className="size-4 text-black" />
-          </div>
-          <span className="font-bold text-white text-base tracking-tight">MusicPlayer</span>
-        </div>
-
+      {/* Top Panel: Nav */}
+      <div className="bg-[#121212] rounded-lg px-3 py-4 space-y-1">
         <nav className="space-y-0.5">
           <Link
             href="/"
