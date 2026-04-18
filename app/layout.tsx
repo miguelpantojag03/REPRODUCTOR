@@ -11,6 +11,7 @@ import { MobileNav } from './mobile-nav';
 import { PlaybackControls } from './playback-controls';
 import { ToastProvider } from './toast-provider';
 import { MiniPlayer } from './mini-player';
+import { SessionProvider } from './session-provider';
 import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = {
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="flex flex-col md:flex-row h-[100dvh] text-gray-200 bg-[#0a0a0a] overflow-hidden selection:bg-[#1db954]/30 font-sans antialiased">
         <PlaybackProvider>
           <ToastProvider>
+            <SessionProvider>
             <Suspense fallback={
               <div className="h-[100dvh] w-full bg-[#0a0a0a] flex items-center justify-center">
                 <div className="flex items-end gap-1 h-8">
@@ -59,6 +61,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <MobileNav />
               </PlaylistProvider>
             </Suspense>
+          </SessionProvider>
           </ToastProvider>
         </PlaybackProvider>
       </body>

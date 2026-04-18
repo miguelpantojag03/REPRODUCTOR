@@ -80,6 +80,11 @@ function TrackRow({
   const [isDeleting, setIsDeleting] = useState(false);
   const isCurrentTrack = currentTrack?.id === track.id;
 
+  // Keep isLiked in sync when the track object updates (e.g. after updateTrackInPlaylist)
+  useEffect(() => {
+    setIsLiked(Boolean((track as any).favorite));
+  }, [(track as any).favorite]);
+
   async function handleToggleFavorite(e: React.MouseEvent) {
     e.stopPropagation();
     const nextState = !isLiked;

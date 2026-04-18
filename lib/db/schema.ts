@@ -111,3 +111,40 @@ export let playlistSongsRelations = relations(playlistSongs, ({ one }) => ({
     references: [songs.id],
   }),
 }));
+
+/* ── Users (Auth) ─────────────────────────────────────────────── */
+export let users = pgTable(
+  'users',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').notNull().unique(),
+    name: text('name'),
+    image: text('image'),
+    phone: text('phone'),
+    passwordHash: text('password_hash'),
+    provider: text('provider').notNull().default('credentials'), // 'credentials' | 'google' | 'facebook'
+    googleId: text('google_id'),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow(),
+  },
+  (table) => ({
+    emailIndex: uniqueIndex('idx_users_email').on(table.email),
+    googleIdIndex: index('idx_users_google_id').on(table.googleId),
+  })
+);
+
+export let accounts = pgTable('accounts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  provider: text('provider').notNull(),
+  providerAccountId: text('provider_account_id').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export let usersRelations = relations(users, ({ many }) => ({
+  accounts: many(accounts),
+}));
+
+export let accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, { fields: [accounts.userId], references: [users.id] }),
+}));
