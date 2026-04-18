@@ -19,7 +19,7 @@ function formatTime(t: number) {
 }
 
 export function TrackInfo({ onExpand }: { onExpand?: () => void }) {
-  const { currentTrack, setActivePanel } = usePlayback();
+  const { currentTrack, isPlaying, setActivePanel } = usePlayback();
   const [isLiked, setIsLiked] = useState(false);
 
   useEffect(() => {
@@ -39,7 +39,10 @@ export function TrackInfo({ onExpand }: { onExpand?: () => void }) {
       {currentTrack ? (
         <>
           <div
-            className="relative size-14 flex-shrink-0 rounded-md overflow-hidden shadow-lg cursor-pointer group"
+            className={cn(
+              'relative size-14 flex-shrink-0 rounded-md overflow-hidden shadow-lg cursor-pointer group transition-all duration-300',
+              isPlaying && 'animate-glow-pulse'
+            )}
             onClick={() => setActivePanel('now-playing')}
           >
             <img
@@ -125,7 +128,7 @@ export function PlaybackButtons() {
         <button
           onClick={togglePlayPause}
           disabled={!currentTrack || isLoadingYouTube}
-          className="w-9 h-9 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform active:scale-95 disabled:opacity-50 shadow-lg"
+          className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-transform active:scale-95 disabled:opacity-50 shadow-lg"
         >
           {isLoadingYouTube ? (
             <Loader2 className="size-4 animate-spin text-gray-500" />
@@ -195,7 +198,7 @@ export function ProgressBar() {
       <span className="text-[11px] tabular-nums text-[#a7a7a7] w-10 text-right shrink-0">{formatTime(display)}</span>
       <div
         ref={barRef}
-        className="flex-1 h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative group flex items-center"
+        className="flex-1 h-1 bg-[#4d4d4d] rounded-full cursor-pointer relative group flex items-center hover:h-1.5 transition-all duration-150"
         onMouseDown={(e) => { e.preventDefault(); setIsDragging(true); setDragVal(calcTime(e)); }}
       >
         <div className="absolute inset-y-0 left-0 bg-white group-hover:bg-[#1db954] rounded-full transition-colors" style={{ width: `${pct}%` }} />

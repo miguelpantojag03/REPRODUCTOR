@@ -81,9 +81,14 @@ export default async function Page({
           {/* Recently Played */}
           {recentlyPlayed.length > 0 && (
             <section className="mb-8">
-              <div className="flex items-center gap-2 mb-4">
-                <Clock className="size-5 text-[#1db954]" />
-                <h2 className="text-xl font-bold">Escuchado recientemente</h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="size-5 text-[#1db954]" />
+                  <h2 className="text-xl font-bold">Escuchado recientemente</h2>
+                </div>
+                <Link href="/?q=" className="text-sm text-[#b3b3b3] hover:text-white transition-colors font-medium">
+                  Ver todo
+                </Link>
               </div>
               <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
                 {recentlyPlayed.map((song) => (
@@ -96,9 +101,14 @@ export default async function Page({
           {/* Most Played */}
           {mostPlayed.length > 0 && (
             <section className="mb-8">
-              <div className="flex items-center gap-2 mb-4">
-                <TrendingUp className="size-5 text-[#1db954]" />
-                <h2 className="text-xl font-bold">Más escuchadas</h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="size-5 text-[#1db954]" />
+                  <h2 className="text-xl font-bold">Más escuchadas</h2>
+                </div>
+                <Link href="/?q=" className="text-sm text-[#b3b3b3] hover:text-white transition-colors font-medium">
+                  Ver todo
+                </Link>
               </div>
               <div className="space-y-1">
                 {mostPlayed.map((song, i) => (

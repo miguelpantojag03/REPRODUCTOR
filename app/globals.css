@@ -1,6 +1,21 @@
 @import "tailwindcss";
 @config "../tailwind.config.ts";
 
+/* Better font rendering & smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Better focus styles */
+:focus-visible {
+  outline: 2px solid #1db954;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -169,6 +184,32 @@ tr:focus {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Green gradient text utility */
+.text-gradient {
+  background: linear-gradient(135deg, #1db954 0%, #1ed760 50%, #17a349 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Float animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Glow pulse for active track */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(29, 185, 84, 0.4), 0 0 24px rgba(29, 185, 84, 0.2); }
+  50% { box-shadow: 0 0 20px rgba(29, 185, 84, 0.7), 0 0 40px rgba(29, 185, 84, 0.35); }
+}
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
 }
 
 /* Glass morphism */

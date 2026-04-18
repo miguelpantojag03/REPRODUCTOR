@@ -149,10 +149,14 @@ export function NowPlaying() {
             <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
               {/* Cover art with upload */}
               <div className="relative aspect-square w-full rounded-lg overflow-hidden bg-[#282828] shadow-2xl group">
+                {/* Pulsing ring when playing */}
+                {isPlaying && (
+                  <div className="absolute -inset-1 rounded-xl bg-gradient-to-br from-[#1db954]/60 to-[#1db954]/20 animate-glow-pulse pointer-events-none z-10" />
+                )}
                 <img
                   src={getValidImageUrl(currentImageUrl)}
                   alt="Cover"
-                  className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                  className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110 relative z-0"
                 />
                 <form action={imageFormAction} className="absolute inset-0">
                   <input type="hidden" name="trackId" value={currentTrack.id} />
@@ -190,7 +194,12 @@ export function NowPlaying() {
               {/* Track info */}
               <div className="space-y-1">
                 <h3 className="text-xl font-bold text-white truncate">{currentTrack.name}</h3>
-                <p className="text-sm text-[#b3b3b3] hover:text-white transition-colors cursor-pointer">{currentTrack.artist}</p>
+                <Link
+                  href={`/artist/${encodeURIComponent(currentTrack.artist)}`}
+                  className="text-sm text-[#b3b3b3] hover:text-white transition-colors cursor-pointer hover:underline block"
+                >
+                  {currentTrack.artist}
+                </Link>
                 {(currentTrack as any).playCount > 0 && (
                   <p className="text-xs text-gray-600">{(currentTrack as any).playCount} reproducciones</p>
                 )}

@@ -123,7 +123,7 @@ function TrackRow({
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, index)}
       className={cn(
-        'group cursor-pointer hover:bg-white/10 select-none relative transition-colors duration-100',
+        'group cursor-pointer hover:bg-white/[0.12] select-none relative transition-colors duration-100',
         isCurrentTrack && 'bg-white/5',
         isDragOver && 'border-t-2 border-[#1db954] bg-[#1db954]/5',
         isDeleting && 'opacity-40 pointer-events-none'
@@ -140,7 +140,7 @@ function TrackRow({
       }}
     >
       {/* # */}
-      <td className="py-2 pl-3 pr-2 tabular-nums w-10 text-center relative">
+      <td className="py-2 pl-3 pr-2 tabular-nums w-10 text-center relative hidden sm:table-cell">
         <div className="flex items-center justify-center">
           {isCurrentTrack && isPlaying ? (
             <div className="flex items-end justify-center space-x-[2px] h-[10px]">
@@ -434,7 +434,7 @@ export function TrackTable({
       <table ref={tableRef} className="w-full text-left" onClick={() => setActivePanel('tracklist')}>
         <thead className="sticky top-16 bg-[#121212] z-10 border-b border-white/5">
           <tr className="text-gray-400 uppercase text-[10px] tracking-widest font-bold">
-            <th className="py-3 px-3 w-10 text-center">#</th>
+            <th className="py-3 px-3 w-10 text-center hidden sm:table-cell">#</th>
             <th className="py-3 px-2">
               <button className="flex items-center hover:text-white transition-colors" onClick={() => handleSort('name')}>
                 Título <SortIcon field="name" sortField={sortField} sortDir={sortDir} />

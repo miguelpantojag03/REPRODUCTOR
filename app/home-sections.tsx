@@ -11,10 +11,10 @@ export function RecentSongCard({ song }: { song: any }) {
 
   return (
     <div
-      className="flex-shrink-0 w-36 group cursor-pointer"
+      className="flex-shrink-0 w-40 group cursor-pointer"
       onClick={() => playTrack(song)}
     >
-      <div className="relative w-36 h-36 rounded-lg overflow-hidden bg-[#282828] mb-2 shadow-lg">
+      <div className="relative w-40 h-40 rounded-lg overflow-hidden bg-[#282828] mb-2 shadow-lg">
         <Image
           src={getValidImageUrl(song.imageUrl)}
           alt={song.name}
@@ -40,6 +40,35 @@ export function RecentSongCard({ song }: { song: any }) {
   );
 }
 
+function RankBadge({ rank }: { rank: number }) {
+  if (rank === 1) {
+    return (
+      <span className="text-sm font-bold tabular-nums w-5 text-center" style={{ color: '#FFD700' }}>
+        1
+      </span>
+    );
+  }
+  if (rank === 2) {
+    return (
+      <span className="text-sm font-bold tabular-nums w-5 text-center" style={{ color: '#C0C0C0' }}>
+        2
+      </span>
+    );
+  }
+  if (rank === 3) {
+    return (
+      <span className="text-sm font-bold tabular-nums w-5 text-center" style={{ color: '#CD7F32' }}>
+        3
+      </span>
+    );
+  }
+  return (
+    <span className="text-gray-500 tabular-nums w-5 text-center text-sm font-bold">
+      {rank}
+    </span>
+  );
+}
+
 export function MostPlayedRow({ song, rank }: { song: any; rank: number }) {
   const { playTrack, currentTrack, isPlaying } = usePlayback();
   const isCurrent = currentTrack?.id === song.id;
@@ -49,10 +78,12 @@ export function MostPlayedRow({ song, rank }: { song: any; rank: number }) {
       className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-white/5 transition-colors group cursor-pointer"
       onClick={() => playTrack(song)}
     >
-      <span className="text-gray-500 tabular-nums w-5 text-center text-sm font-bold group-hover:hidden">
-        {rank}
-      </span>
-      <Play className="size-4 text-white fill-white hidden group-hover:block flex-shrink-0" />
+      <div className="w-5 flex items-center justify-center flex-shrink-0">
+        <span className="group-hover:hidden">
+          <RankBadge rank={rank} />
+        </span>
+        <Play className="size-4 text-white fill-white hidden group-hover:block flex-shrink-0" />
+      </div>
       <div className="relative size-10 rounded overflow-hidden bg-[#282828] flex-shrink-0">
         <Image src={getValidImageUrl(song.imageUrl)} alt={song.name} fill className="object-cover" />
         {isCurrent && isPlaying && (
