@@ -561,20 +561,115 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [togglePlayPause, toggleShuffle, cycleRepeat, playPreviousTrack]);
 
-  // MediaSession API
+  // MediaSession API — full implementation for lock screen controls
   useEffect(() => {
     if (!('mediaSession' in navigator) || !currentTrack) return;
+
+    // Set metadata (shows on lock screen / notification)
+    const artwork = currentTrack.imageUrl
+      ? [
+          { src: currentTrack.imageUrl, sizes: '96x96',   type: 'image/jpeg' },
+          { src: currentTrack.imageUrl, sizes: '128x128', type: 'image/jpeg' },
+          { src: currentTrack.imageUrl, sizes: '256x256', type: 'image/jpeg' },
+          { src: currentTrack.imageUrl, sizes: '512x512', type: 'image/jpeg' },
+        ]
+      : [];
+
     navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentTrack.name,
+      title:  currentTrack.name,
       artist: currentTrack.artist,
-      album: currentTrack.album || '',
-      artwork: currentTrack.imageUrl ? [{ src: currentTrack.imageUrl, sizes: '512x512', type: 'image/jpeg' }] : [],
+      album:  currentTrack.album || '',
+      artwork,
     });
-    navigator.mediaSession.setActionHandler('play', () => { audioRef.current?.play(); setIsPlaying(true); });
-    navigator.mediaSession.setActionHandler('pause', () => { audioRef.current?.pause(); setIsPlaying(false); });
+
+    // Playback state
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+    // Action handlers
+    navigator.mediaSession.setActionHandler('play', () => {
+      audioRef.current?.play();
+      setIsPlaying(true);
+      navigator.mediaSession.playbackState = 'playing';
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      navigator.mediaSession.playbackState = 'paused';
+    });
+    navigator.mediaSession.setActionHandler('stop', () => {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      navigator.mediaSession.playbackState = 'none';
+    });
     navigator.mediaSession.setActionHandler('nexttrack', () => playNextTrackRef.current?.());
     navigator.mediaSession.setActionHandler('previoustrack', playPreviousTrack);
-  }, [currentTrack, playPreviousTrack]);
+
+    // Seek support
+    navigator.mediaSession.setActionHandler('seekto', (details) => {
+      if (details.seekTime !== undefined && audioRef.current) {
+        audioRef.current.currentTime = details.seekTime;
+        setCurrentTimeState(details.seekTime);
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekforward', (details) => {
+      if (audioRef.current) {
+        const skip = details.seekOffset ?? 10;
+        audioRef.current.currentTime = Math.min(audioRef.current.currentTime + skip, audioRef.current.duration);
+      }
+    });
+    navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+      if (audioRef.current) {
+        const skip = details.seekOffset ?? 10;
+        audioRef.current.currentTime = Math.max(audioRef.current.currentTime - skip, 0);
+      }
+    });
+  }, [currentTrack, isPlaying, playPreviousTrack]);
+
+  // Update MediaSession position state as audio plays
+  useEffect(() => {
+    if (!('mediaSession' in navigator) || !audioRef.current) return;
+    if (!currentTrack || currentTrack.id.startsWith('itunes-')) return;
+    if (duration <= 0) return;
+
+    try {
+      navigator.mediaSession.setPositionState({
+        duration,
+        playbackRate: audioRef.current.playbackRate,
+        position: Math.min(currentTime, duration),
+      });
+    } catch { /* ignore */ }
+  }, [currentTime, duration, currentTrack]);
+
+  // Service Worker registration for background audio
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {});
+  }, []);
+
+  // Wake Lock — keep screen/audio active while playing
+  const wakeLockRef = useRef<any>(null);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('wakeLock' in navigator)) return;
+
+    const acquire = async () => {
+      try {
+        if (isPlaying && !wakeLockRef.current) {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+          wakeLockRef.current.addEventListener('release', () => { wakeLockRef.current = null; });
+        } else if (!isPlaying && wakeLockRef.current) {
+          await wakeLockRef.current.release();
+          wakeLockRef.current = null;
+        }
+      } catch { /* Wake Lock not available */ }
+    };
+
+    acquire();
+
+    // Re-acquire when tab becomes visible again
+    const onVisible = () => { if (isPlaying) acquire(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [isPlaying]);
 
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current && !currentTrack?.id.startsWith('itunes-')) {
@@ -631,12 +726,19 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     >
       {children}
       <div id="youtube-player" style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden' }} />
+      {/* 
+        playsInline: required for iOS to play audio without fullscreen
+        x-webkit-airplay: enables AirPlay on iOS
+        The audio element must be in the DOM for background playback to work
+      */}
       <audio
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onDurationChange={handleDurationChange}
         onEnded={handleEnded}
         preload="auto"
+        playsInline
+        {...{ 'x-webkit-airplay': 'allow', 'webkit-playsinline': 'true' } as any}
       />
     </PlaybackContext.Provider>
   );

@@ -1,17 +1,17 @@
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { TrackTable } from './p/[id]/track-table';
+import { TrackTable } from '@/app/(app)/p/[id]/track-table';
 import { Suspense } from 'react';
-import { Loader2, Music, Clock, TrendingUp, ChevronRight, Sparkles, Plus } from 'lucide-react';
+import { Loader2, Music, Clock, TrendingUp, ChevronRight, Plus } from 'lucide-react';
 import { getAllPlaylists, getRecentlyPlayedSongs, getMostPlayedSongs, getRecentlyAddedSongs } from '@/lib/db/queries';
-import { searchOnlineTracksAction, searchOnlineAlbumsAction } from './actions';
-import { OnlineResults } from './online-results';
-import { OnlineAlbums } from './online-albums';
+import { searchOnlineTracksAction, searchOnlineAlbumsAction } from '@/app/actions';
+import { OnlineResults } from '@/app/online-results';
+import { OnlineAlbums } from '@/app/online-albums';
 import Link from 'next/link';
-import { ScrollHeader } from './scroll-header';
+import { ScrollHeader } from '@/app/scroll-header';
 import { getValidImageUrl } from '@/lib/utils';
 import Image from 'next/image';
-import { LibraryStats as LibraryStatsClient } from './library-stats';
-import { RecentSongCard, MostPlayedRow } from './home-sections';
+import { LibraryStats as LibraryStatsClient } from '@/app/library-stats';
+import { RecentSongCard, MostPlayedRow } from '@/app/home-sections';
 
 function getGreeting() {
   const h = new Date().getHours();
