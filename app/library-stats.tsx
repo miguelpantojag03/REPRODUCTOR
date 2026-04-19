@@ -14,19 +14,22 @@ export function LibraryStats() {
   const favorites = playlist.filter(s => (s as any).favorite).length;
 
   const stats = [
-    { icon: Music2, label: `${playlist.length} canciones`, color: 'text-[#1db954]' },
-    { icon: Clock, label: formatDuration(totalDuration), color: 'text-blue-400' },
-    { icon: Users, label: `${artists} artistas`, color: 'text-purple-400' },
-    { icon: Disc3, label: `${albums} álbumes`, color: 'text-orange-400' },
-    { icon: Heart, label: `${favorites} favoritas`, color: 'text-pink-400' },
+    { icon: Music2,  label: `${playlist.length} canciones`, color: 'text-[#1db954]',  bg: 'bg-[#1db954]/10' },
+    { icon: Clock,   label: formatDuration(totalDuration),   color: 'text-blue-400',   bg: 'bg-blue-400/10'  },
+    { icon: Users,   label: `${artists} artistas`,           color: 'text-purple-400', bg: 'bg-purple-400/10'},
+    { icon: Disc3,   label: `${albums} álbumes`,             color: 'text-orange-400', bg: 'bg-orange-400/10'},
+    { icon: Heart,   label: `${favorites} favoritas`,        color: 'text-pink-400',   bg: 'bg-pink-400/10'  },
   ];
 
   return (
-    <div className="flex flex-wrap gap-2 mb-2">
-      {stats.map(({ icon: Icon, label, color }) => (
-        <div key={label} className="flex items-center gap-1.5 bg-white/[0.05] rounded-full px-3 py-1.5 border border-white/[0.06]">
-          <Icon className={cn('size-3', color)} />
-          <span className="text-xs text-[#b3b3b3] font-medium">{label}</span>
+    <div className="flex flex-wrap gap-2">
+      {stats.map(({ icon: Icon, label, color, bg }) => (
+        <div
+          key={label}
+          className={cn('flex items-center gap-2 rounded-full px-3 py-1.5 border border-white/[0.06]', bg)}
+        >
+          <Icon className={cn('size-3.5 flex-shrink-0', color)} />
+          <span className="text-xs text-[#b3b3b3] font-medium whitespace-nowrap">{label}</span>
         </div>
       ))}
     </div>

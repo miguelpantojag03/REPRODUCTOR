@@ -134,8 +134,10 @@ function TrackRow({
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, index)}
       className={cn(
-        'group cursor-pointer hover:bg-white/[0.12] select-none relative transition-colors duration-100',
-        isCurrentTrack && 'bg-white/5',
+        'group cursor-pointer select-none relative transition-colors duration-100',
+        isCurrentTrack
+          ? 'bg-white/[0.06] track-active'
+          : 'hover:bg-white/[0.07] active:bg-white/[0.10]',
         isDragOver && 'border-t-2 border-[#1db954] bg-[#1db954]/5',
         isDeleting && 'opacity-40 pointer-events-none'
       )}

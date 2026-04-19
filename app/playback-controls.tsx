@@ -313,9 +313,18 @@ function RightControls() {
 
 /* ── Main Bar ───────────────────────────────────────────────── */
 export function PlaybackControls() {
+  const { isPlaying } = usePlayback();
+
   return (
-    <div className="hidden md:flex fixed bottom-0 left-0 right-0 z-50 items-center justify-between px-4 h-[70px] bg-[#0a0a0a] border-t border-white/[0.06]"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div
+      className="hidden md:flex fixed bottom-0 left-0 right-0 z-50 items-center justify-between px-4 h-[72px] border-t border-white/[0.06]"
+      style={{
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        background: 'linear-gradient(to top, rgba(0,0,0,0.98) 0%, rgba(10,10,10,0.95) 100%)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+      }}
+    >
       <TrackInfo />
       <CenterControls />
       <RightControls />

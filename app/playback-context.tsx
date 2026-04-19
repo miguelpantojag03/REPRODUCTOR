@@ -137,6 +137,14 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
     return 1;
   });
 
+  // Crossfade duration in seconds (0 = disabled)
+  const [crossfadeDuration] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Number(localStorage.getItem('player-crossfade') ?? 0);
+    }
+    return 0;
+  });
+
   // Persist volume in localStorage
   const [volume, setVolumeState] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -673,9 +681,20 @@ export function PlaybackProvider({ children }: { children: ReactNode }) {
 
   const handleTimeUpdate = useCallback(() => {
     if (audioRef.current && !currentTrack?.id.startsWith('itunes-')) {
-      setCurrentTimeState(audioRef.current.currentTime);
+      const t = audioRef.current.currentTime;
+      const d = audioRef.current.duration;
+      setCurrentTimeState(t);
+
+      // Crossfade: fade out in the last N seconds
+      if (crossfadeDuration > 0 && d > 0 && !isNaN(d)) {
+        const remaining = d - t;
+        if (remaining <= crossfadeDuration && remaining > 0) {
+          const fadeVol = (remaining / crossfadeDuration) * (volume / 100);
+          audioRef.current.volume = Math.max(0, Math.min(1, fadeVol));
+        }
+      }
     }
-  }, [currentTrack]);
+  }, [currentTrack, crossfadeDuration, volume]);
 
   const handleDurationChange = useCallback(() => {
     if (audioRef.current && !currentTrack?.id.startsWith('itunes-')) {

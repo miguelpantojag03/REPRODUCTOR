@@ -3,44 +3,41 @@
 import { usePlayback } from '@/app/playback-context';
 import { Song } from '@/lib/db/types';
 import { Play, Shuffle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 export function PlayAllButton({ songs }: { songs: Song[] }) {
-  const { setPlaylist, playTrack, toggleShuffle, isShuffle } = usePlayback();
+  const { setPlaylist, playTrack } = usePlayback();
 
-  const handlePlayAll = () => {
-    if (songs.length === 0) return;
+  const playAll = () => {
+    if (!songs.length) return;
     setPlaylist(songs);
     playTrack(songs[0]);
   };
 
-  const handleShuffleAll = () => {
-    if (songs.length === 0) return;
+  const shuffleAll = () => {
+    if (!songs.length) return;
     const shuffled = [...songs].sort(() => Math.random() - 0.5);
     setPlaylist(shuffled);
     playTrack(shuffled[0]);
   };
 
+  if (!songs.length) return null;
+
   return (
-    <div className="flex items-center gap-2">
-      <Button
-        onClick={handlePlayAll}
-        disabled={songs.length === 0}
-        className="h-8 text-xs bg-[#1db954] hover:bg-[#1fdf64] text-black font-bold px-5 rounded-full transition-all hover:scale-105 active:scale-95"
+    <div className="flex items-center gap-3">
+      <button
+        onClick={playAll}
+        className="flex items-center gap-2 bg-[#1db954] hover:bg-[#1ed760] active:scale-95 text-black font-bold px-7 py-3 rounded-full transition-all shadow-lg shadow-[#1db954]/20 hover:shadow-[#1db954]/30"
       >
-        <Play className="size-3.5 mr-1.5 fill-black" />
-        Reproducir todo
-      </Button>
-      <Button
-        onClick={handleShuffleAll}
-        disabled={songs.length === 0}
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8 text-[#b3b3b3] hover:text-white hover:bg-white/10 rounded-full"
+        <Play className="size-5 fill-black" />
+        Reproducir
+      </button>
+      <button
+        onClick={shuffleAll}
+        className="flex items-center justify-center size-12 rounded-full border border-white/20 text-white hover:border-white/40 hover:bg-white/5 active:scale-95 transition-all"
         title="Reproducir en aleatorio"
       >
-        <Shuffle className="size-4" />
-      </Button>
+        <Shuffle className="size-5" />
+      </button>
     </div>
   );
 }

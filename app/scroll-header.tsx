@@ -6,30 +6,41 @@ import { KeyboardShortcuts } from './keyboard-shortcuts';
 import { cn } from '@/lib/utils';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { UserRound, LogOut, Settings, LogIn } from 'lucide-react';
+import { LogOut, Settings, LogIn, User } from 'lucide-react';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+
+function UserAvatar({ name, image }: { name?: string | null; image?: string | null }) {
+  if (image) {
+    return <img src={image} alt={name ?? ''} className="w-full h-full object-cover" />;
+  }
+  const initials = name
+    ? name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    : 'U';
+  return (
+    <div className="w-full h-full bg-gradient-to-br from-[#1db954] to-indigo-500 flex items-center justify-center">
+      <span className="text-xs font-bold text-white">{initials}</span>
+    </div>
+  );
+}
 
 function UserMenu() {
   const { data: session, status } = useSession();
 
   if (status === 'loading') {
-    return <div className="size-8 rounded-full bg-white/10 shimmer" />;
+    return <div className="size-8 rounded-full bg-white/10 shimmer flex-shrink-0" />;
   }
 
   if (!session) {
     return (
       <Link
         href="/login"
-        className="flex items-center gap-1.5 text-xs font-semibold text-[#b3b3b3] hover:text-white transition-colors bg-white/[0.07] hover:bg-white/[0.12] px-3 py-1.5 rounded-full"
+        className="flex items-center gap-1.5 text-xs font-semibold text-[#b3b3b3] hover:text-white transition-all bg-white/[0.07] hover:bg-white/[0.12] px-3 py-1.5 rounded-full border border-white/[0.06] hover:border-white/[0.12]"
       >
         <LogIn className="size-3.5" />
-        Iniciar sesión
+        <span className="hidden sm:inline">Iniciar sesión</span>
       </Link>
     );
   }
@@ -37,34 +48,35 @@ function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="size-8 rounded-full overflow-hidden border border-white/10 hover:border-white/30 transition-colors flex-shrink-0 focus:outline-none">
-          {session.user?.image ? (
-            <img src={session.user.image} alt="" className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-[#1db954] to-indigo-500 flex items-center justify-center">
-              <span className="text-xs font-bold text-white">
-                {session.user?.name?.[0]?.toUpperCase() || 'U'}
-              </span>
-            </div>
-          )}
+        <button className="size-8 rounded-full overflow-hidden border-2 border-transparent hover:border-[#1db954]/50 transition-all flex-shrink-0 focus:outline-none focus:border-[#1db954]/50">
+          <UserAvatar name={session.user?.name} image={session.user?.image} />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52 bg-[#282828] border-white/10 text-white shadow-2xl rounded-xl">
-        <div className="px-3 py-2.5 border-b border-white/[0.06]">
-          <p className="text-sm font-semibold text-white truncate">{session.user?.name}</p>
-          <p className="text-xs text-[#6b7280] truncate">{session.user?.email}</p>
+      <DropdownMenuContent align="end" className="w-56 bg-[#1f1f1f] border-white/[0.08] text-white shadow-2xl rounded-xl p-1">
+        {/* User info */}
+        <div className="flex items-center gap-3 px-3 py-3 mb-1">
+          <div className="size-10 rounded-full overflow-hidden flex-shrink-0 border border-white/10">
+            <UserAvatar name={session.user?.name} image={session.user?.image} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{session.user?.name ?? 'Usuario'}</p>
+            <p className="text-xs text-[#727272] truncate">{session.user?.email}</p>
+          </div>
         </div>
-        <DropdownMenuItem asChild className="cursor-pointer rounded-lg mt-1">
-          <Link href="/settings" className="flex items-center gap-2">
-            <Settings className="size-4" /> Configuración
+        <div className="h-px bg-white/[0.06] mx-1 mb-1" />
+        <DropdownMenuItem asChild className="cursor-pointer rounded-lg text-sm">
+          <Link href="/settings" className="flex items-center gap-2.5 px-3 py-2">
+            <Settings className="size-4 text-[#727272]" />
+            Configuración
           </Link>
         </DropdownMenuItem>
-        <DropdownMenuSeparator className="bg-white/[0.06]" />
+        <DropdownMenuSeparator className="bg-white/[0.06] my-1" />
         <DropdownMenuItem
           onClick={() => signOut({ callbackUrl: '/login' })}
-          className="text-red-400 focus:text-red-400 focus:bg-red-500/10 cursor-pointer rounded-lg"
+          className="text-red-400 focus:bg-red-500/10 focus:text-red-400 cursor-pointer rounded-lg text-sm px-3 py-2"
         >
-          <LogOut className="size-4 mr-2" /> Cerrar sesión
+          <LogOut className="size-4 mr-2.5" />
+          Cerrar sesión
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -81,10 +93,14 @@ export function ScrollHeader({ query }: { query?: string }) {
   }, []);
 
   return (
-    <header className={cn(
-      'absolute top-0 inset-x-0 z-20 flex items-center gap-3 px-4 sm:px-6 h-14 sm:h-16 transition-all duration-200',
-      scrolled ? 'bg-[#121212]/95 backdrop-blur-md border-b border-white/[0.06]' : 'bg-transparent'
-    )}>
+    <header
+      className={cn(
+        'absolute top-0 inset-x-0 z-20 flex items-center gap-3 px-4 sm:px-6 h-14 sm:h-16 transition-all duration-200',
+        scrolled
+          ? 'bg-[#121212]/95 backdrop-blur-xl border-b border-white/[0.06] shadow-sm'
+          : 'bg-transparent'
+      )}
+    >
       <div className="flex-1">
         <SearchInput value={query} />
       </div>

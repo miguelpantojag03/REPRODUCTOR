@@ -115,6 +115,16 @@ export default function SettingsPage() {
           <Row label="Reproducción automática" description="Continuar reproduciendo al terminar la cola">
             <Toggle value={autoplay} onChange={setAutoplay} />
           </Row>
+          <Row label="Crossfade" description={crossfade === 0 ? 'Desactivado' : `${crossfade}s entre canciones`}>
+            <div className="flex items-center gap-3 w-40">
+              <Slider
+                value={[crossfade]}
+                min={0} max={12} step={1}
+                onValueChange={([v]) => setCrossfade(v)}
+              />
+              <span className="text-xs text-[#b3b3b3] w-6 text-right tabular-nums">{crossfade}s</span>
+            </div>
+          </Row>
         </Section>
 
         {/* Display */}
