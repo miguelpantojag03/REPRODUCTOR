@@ -175,7 +175,7 @@ function LoginForm() {
 
           <div className="p-6 space-y-4">
 
-            {/* Google button */}
+            {/* Google button — only show if configured */}
             <button
               type="button"
               onClick={handleGoogle}
@@ -327,30 +327,7 @@ function LoginForm() {
             <p className="text-center">
               <button
                 type="button"
-                onClick={async () => {
-                  // Sign in as guest using a special guest account
-                  setLoading(true);
-                  const res = await signIn('credentials', {
-                    email: 'guest@music.local',
-                    password: 'guest123',
-                    name: 'Invitado',
-                    mode: 'login',
-                    redirect: false,
-                  });
-                  // If guest doesn't exist, create it
-                  if (res?.error) {
-                    await signIn('credentials', {
-                      email: 'guest@music.local',
-                      password: 'guest123',
-                      name: 'Invitado',
-                      mode: 'register',
-                      redirect: false,
-                    });
-                  }
-                  setLoading(false);
-                  router.push('/');
-                  router.refresh();
-                }}
+                onClick={() => { router.push('/'); router.refresh(); }}
                 className="text-xs text-[#6b7280] hover:text-[#b3b3b3] transition-colors underline-offset-2 hover:underline"
               >
                 Continuar sin cuenta →

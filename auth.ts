@@ -12,52 +12,48 @@ function hashPassword(password: string, secret: string): string {
   return createHash('sha256').update(password + secret).digest('hex');
 }
 
+// Use a stable fallback secret so the app works even without AUTH_SECRET env var
+const SECRET = process.env.AUTH_SECRET || 'music-player-default-secret-change-in-production';
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  secret: process.env.AUTH_SECRET,
+  secret: SECRET,
   trustHost: true,
 
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID ?? '',
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
-      allowDangerousEmailAccountLinking: true,
-    }),
+    // Google only works if credentials are configured
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [Google({
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          allowDangerousEmailAccountLinking: true,
+        })]
+      : []),
 
     Credentials({
       name: 'credentials',
       credentials: {
-        email:    { label: 'Email',      type: 'email'    },
-        password: { label: 'Password',   type: 'password' },
-        name:     { label: 'Name',       type: 'text'     },
-        phone:    { label: 'Phone',      type: 'tel'      },
-        mode:     { label: 'Mode',       type: 'text'     },
+        email:    { label: 'Email',    type: 'email'    },
+        password: { label: 'Password', type: 'password' },
+        name:     { label: 'Name',     type: 'text'     },
+        phone:    { label: 'Phone',    type: 'tel'      },
+        mode:     { label: 'Mode',     type: 'text'     },
       },
       async authorize(credentials) {
         try {
           const email    = String(credentials?.email    ?? '').toLowerCase().trim();
           const password = String(credentials?.password ?? '');
           const mode     = String(credentials?.mode     ?? 'login');
-          const secret   = process.env.AUTH_SECRET ?? 'fallback-secret';
 
-          // Basic validation
-          if (!email)    return null;
-          if (!password) return null;
+          if (!email || !password) return null;
 
           if (mode === 'register') {
-            // Check duplicate
             const existing = await db
               .select({ id: users.id })
               .from(users)
               .where(eq(users.email, email))
               .limit(1);
 
-            if (existing.length > 0) {
-              // Return null with a special marker so the client can show the right message
-              // We encode the error in a fake email field trick isn't needed —
-              // instead we return null and the client shows a generic message.
-              // For custom messages, we throw — NextAuth v5 catches it as "CallbackRouteError"
-              throw new Error('EMAIL_EXISTS');
-            }
+            if (existing.length > 0) throw new Error('EMAIL_EXISTS');
 
             const [newUser] = await db
               .insert(users)
@@ -66,16 +62,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 email,
                 name: String(credentials?.name ?? email.split('@')[0]),
                 phone: credentials?.phone ? String(credentials.phone) : null,
-                passwordHash: hashPassword(password, secret),
+                passwordHash: hashPassword(password, SECRET),
                 provider: 'credentials',
               })
               .returning();
 
-            return {
-              id: newUser.id,
-              email: newUser.email,
-              name: newUser.name ?? email.split('@')[0],
-            };
+            return { id: newUser.id, email: newUser.email, name: newUser.name ?? email.split('@')[0] };
           }
 
           // Login
@@ -85,27 +77,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .where(eq(users.email, email))
             .limit(1);
 
-          if (!user)             throw new Error('USER_NOT_FOUND');
+          if (!user)              throw new Error('USER_NOT_FOUND');
           if (!user.passwordHash) throw new Error('USE_GOOGLE');
-          if (user.passwordHash !== hashPassword(password, secret)) {
-            throw new Error('WRONG_PASSWORD');
-          }
+          if (user.passwordHash !== hashPassword(password, SECRET)) throw new Error('WRONG_PASSWORD');
 
-          return {
-            id:    user.id,
-            email: user.email,
-            name:  user.name ?? email.split('@')[0],
-            image: user.image,
-          };
+          return { id: user.id, email: user.email, name: user.name ?? email.split('@')[0], image: user.image };
         } catch (err: any) {
-          // Re-throw known errors so NextAuth passes them through
-          if (err?.message && [
-            'EMAIL_EXISTS', 'USER_NOT_FOUND', 'USE_GOOGLE', 'WRONG_PASSWORD'
-          ].includes(err.message)) {
-            throw err;
-          }
-          // Unknown DB error
-          console.error('[Auth] authorize error:', err);
+          const known = ['EMAIL_EXISTS', 'USER_NOT_FOUND', 'USE_GOOGLE', 'WRONG_PASSWORD'];
+          if (known.includes(err?.message)) throw err;
+          console.error('[Auth]', err);
           throw new Error('SERVER_ERROR');
         }
       },
@@ -132,20 +112,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               googleId: account.providerAccountId,
             });
           } else if (!existing[0].googleId) {
-            await db
-              .update(users)
+            await db.update(users)
               .set({ googleId: account.providerAccountId, image: user.image })
               .where(eq(users.email, user.email));
           }
         } catch (err) {
-          console.error('[Auth] Google signIn error:', err);
+          console.error('[Auth] Google signIn:', err);
         }
       }
       return true;
     },
 
     async jwt({ token, user }) {
-      // On first sign-in, enrich token with DB user id
       if (user?.email) {
         try {
           const [dbUser] = await db
@@ -153,10 +131,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .from(users)
             .where(eq(users.email, user.email))
             .limit(1);
-
           if (dbUser) {
-            token.sub   = dbUser.id;
-            token.name  = dbUser.name ?? token.name;
+            token.sub     = dbUser.id;
+            token.name    = dbUser.name ?? token.name;
             token.picture = dbUser.image ?? token.picture;
           }
         } catch { /* ignore */ }
@@ -172,10 +149,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
   },
 
-  pages: {
-    signIn: '/login',
-    error:  '/login',
-  },
-
+  pages: { signIn: '/login', error: '/login' },
   session: { strategy: 'jwt' },
 });
