@@ -15,6 +15,8 @@ import { getValidImageUrl, formatDuration } from '@/lib/utils';
 import Image from 'next/image';
 import { LibraryStats as LibraryStatsClient } from '@/app/library-stats';
 import { RecentSongCard, MostPlayedRow } from '@/app/home-sections';
+import { OnboardingWrapper } from '@/app/onboarding-wrapper';
+import { PersonalizedFeed } from '@/app/personalized-feed';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -53,8 +55,11 @@ export default async function Page({
   // Stats for home
   const totalDuration = allSongs.reduce((a, s) => a + s.duration, 0);
   const uniqueArtists = new Set(allSongs.map(s => s.artist)).size;
+  // Library artists for onboarding suggestions
+  const libraryArtists = [...new Set(allSongs.map(s => s.artist))].slice(0, 20);
 
   return (
+    <OnboardingWrapper libraryArtists={libraryArtists}>
     <div className="flex-1 flex flex-col overflow-hidden bg-[#121212] rounded-none md:rounded-xl md:my-2 md:mr-2 relative">
       {/* Ambient gradient — changes based on context */}
       <div className="absolute top-0 inset-x-0 h-80 bg-gradient-to-b from-indigo-950/60 via-[#121212]/70 to-transparent pointer-events-none" />
@@ -197,6 +202,9 @@ export default async function Page({
                 </section>
               )}
 
+              {/* Personalized feed based on favorite artists */}
+              <PersonalizedFeed />
+
               {/* Library divider */}
               <div id="library" className="flex items-center gap-4 pt-2">
                 <div className="flex-1 h-px bg-white/[0.06]" />
@@ -277,5 +285,6 @@ export default async function Page({
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
+    </OnboardingWrapper>
   );
 }

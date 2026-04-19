@@ -161,6 +161,24 @@ export default function SettingsPage() {
             <Music2 className="size-5 text-[#1db954]" />
           </Row>
         </Section>
+
+        {/* Preferences */}
+        <Section title="Preferencias musicales">
+          <Row label="Artistas favoritos" description="Cambia los artistas que personalizan tu feed">
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('music-onboarding-done');
+                  localStorage.removeItem('music-favorite-artists');
+                  window.location.href = '/';
+                }
+              }}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/[0.07] text-[#b3b3b3] hover:bg-white/[0.12] hover:text-white transition-colors"
+            >
+              Cambiar artistas
+            </button>
+          </Row>
+        </Section>
       </div>
     </div>
   );
