@@ -59,8 +59,9 @@ export default async function Page({
   const libraryArtists = [...new Set(allSongs.map(s => s.artist))].slice(0, 20);
 
   return (
-    <OnboardingWrapper libraryArtists={libraryArtists}>
     <div className="flex-1 flex flex-col overflow-hidden bg-[#121212] rounded-none md:rounded-xl md:my-2 md:mr-2 relative">
+      {/* Onboarding overlay — only shown on first visit, renders on top */}
+      <OnboardingWrapper libraryArtists={libraryArtists} />
       {/* Ambient gradient — changes based on context */}
       <div className="absolute top-0 inset-x-0 h-80 bg-gradient-to-b from-indigo-950/60 via-[#121212]/70 to-transparent pointer-events-none" />
 
@@ -285,6 +286,5 @@ export default async function Page({
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
     </div>
-    </OnboardingWrapper>
   );
 }

@@ -1,37 +1,29 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Onboarding, hasCompletedOnboarding, getStoredFavoriteArtists } from './onboarding';
+import { Onboarding, hasCompletedOnboarding } from './onboarding';
 
 interface OnboardingWrapperProps {
-  children: React.ReactNode;
   libraryArtists: string[];
 }
 
-export function OnboardingWrapper({ children, libraryArtists }: OnboardingWrapperProps) {
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [ready, setReady] = useState(false);
+// This renders as an OVERLAY on top of the app — never replaces the page
+export function OnboardingWrapper({ libraryArtists }: OnboardingWrapperProps) {
+  const [show, setShow] = useState(false);
 
   useEffect(() => {
-    // Check after hydration
-    const done = hasCompletedOnboarding();
-    setShowOnboarding(!done);
-    setReady(true);
+    // Only check after client hydration — avoids SSR mismatch
+    if (!hasCompletedOnboarding()) {
+      setShow(true);
+    }
   }, []);
 
-  if (!ready) {
-    // Avoid flash — render children immediately on SSR
-    return <>{children}</>;
-  }
+  if (!show) return null;
 
-  if (showOnboarding) {
-    return (
-      <Onboarding
-        libraryArtists={libraryArtists}
-        onComplete={() => setShowOnboarding(false)}
-      />
-    );
-  }
-
-  return <>{children}</>;
+  return (
+    <Onboarding
+      libraryArtists={libraryArtists}
+      onComplete={() => setShow(false)}
+    />
+  );
 }
